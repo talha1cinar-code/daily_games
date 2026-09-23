@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "414255296422",
+    "project_id": "daily-games-6b0e3",
+    "storage_bucket": "daily-games-6b0e3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:414255296422:android:2db7da2aadb7e0a273a967",
+        "android_client_info": {
+          "package_name": "com.daily.daily_games"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBSJeprUBtSmahaL0bw5BwVkuPmdXI6QLE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
