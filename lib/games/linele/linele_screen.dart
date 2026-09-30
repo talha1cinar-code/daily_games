@@ -44,10 +44,8 @@ class _LineleScreenState extends State<LineleScreen>
     LineleGame game;
 
     if (widget.isDailyMode) {
-      // Önce Firebase override, yoksa seed tabanlı deterministik (TSİ)
-      final seed = await DailyChallengeService().getLineleSeed();
-      final fallbackSeed = DailyChallengeService.getSeededLineleSeed();
-      game = LineleGame.generateMaze(size: 12, seed: seed ?? fallbackSeed);
+      final seed = DailyChallengeService.getSeededLineleSeed();
+      game = LineleGame.generateMaze(size: 12, seed: seed);
     } else {
       game = LineleGame.generateMaze(size: 12);
     }

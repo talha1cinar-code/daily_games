@@ -22,7 +22,7 @@ enum _GamePhase {
 
 class TimeleScreen extends StatefulWidget {
   final bool isDailyMode;
-  final void Function(double score)? onGameComplete;
+  final void Function(double score, [int durationMs])? onGameComplete;
   const TimeleScreen({super.key, this.isDailyMode = true, this.onGameComplete});
 
   @override
@@ -69,7 +69,7 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
   Future<void> _initGame() async {
     List<int>? durations;
     if (widget.isDailyMode) {
-      durations = await DailyChallengeService().getTimeleChallenge();
+      durations = DailyChallengeService.getSeededTimeleDurations();
     }
     
     setState(() {
@@ -422,11 +422,11 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    if (_phase == _GamePhase.idle) return GameExitWrapper(gameId: 'timele', isDailyMode: widget.isDailyMode, child: Scaffold(backgroundColor: Colors.black, body: _buildIdleScreen()));
-    if (_phase == _GamePhase.countdown) return GameExitWrapper(gameId: 'timele', isDailyMode: widget.isDailyMode, child: Scaffold(backgroundColor: Colors.black, body: _buildCountdownScreen()));
-    if (_phase == _GamePhase.gameOver) return GameExitWrapper(gameId: 'timele', isDailyMode: widget.isDailyMode, child: Scaffold(backgroundColor: Colors.black, body: _buildGameOverScreen()));
+    if (_phase == _GamePhase.idle) return GameExitWrapper(gameId: 'timele', isDailyMode: widget.isDailyMode, onGameComplete: widget.onGameComplete, child: Scaffold(backgroundColor: Colors.black, body: _buildIdleScreen()));
+    if (_phase == _GamePhase.countdown) return GameExitWrapper(gameId: 'timele', isDailyMode: widget.isDailyMode, onGameComplete: widget.onGameComplete, child: Scaffold(backgroundColor: Colors.black, body: _buildCountdownScreen()));
+    if (_phase == _GamePhase.gameOver) return GameExitWrapper(gameId: 'timele', isDailyMode: widget.isDailyMode, onGameComplete: widget.onGameComplete, child: Scaffold(backgroundColor: Colors.black, body: _buildGameOverScreen()));
 
-    return GameExitWrapper(gameId: 'timele', isDailyMode: widget.isDailyMode, child: Scaffold(
+    return GameExitWrapper(gameId: 'timele', isDailyMode: widget.isDailyMode, onGameComplete: widget.onGameComplete, child: Scaffold(
       backgroundColor: Colors.black,
       body: Listener(
         onPointerDown: _onPointerDown,

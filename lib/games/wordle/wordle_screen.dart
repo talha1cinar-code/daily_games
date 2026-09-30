@@ -133,8 +133,8 @@ class _WordleScreenState extends State<WordleScreen>
     String word;
     if (widget.isDailyMode) {
       // Ã–nce Firebase override, yoksa seed tabanlÄ± deterministik seÃ§im
-      String? firebaseWord = await DailyChallengeService().getWordleChallenge();
-      word = firebaseWord ?? DailyChallengeService.getSeededWordleWord(WordleGame.allWords);
+
+      word = DailyChallengeService.getSeededWordleWord(WordleGame.allWords);
     } else {
       word = WordleGame.getRandomWord();
     }

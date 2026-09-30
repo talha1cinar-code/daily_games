@@ -136,21 +136,10 @@ class _WikitriviaScreenState extends State<WikitriviaScreen>
     List<HistoricalEvent>? externalEvents;
     
     if (widget.isDailyMode) {
-      final firebaseEvents = await DailyChallengeService().getWikitriviaChallenge();
-      if (firebaseEvents != null && firebaseEvents.isNotEmpty) {
-        externalEvents = firebaseEvents
-            .map((e) => HistoricalEvent(
-                  title: e['title'] as String,
-                  year: (e['year'] as num).toInt(),
-                ))
-            .toList();
-      } else {
-        // Firebase'de veri yoksa: Seed tabanlı deterministik shuffle (TSİ)
-        externalEvents = DailyChallengeService.getSeededWikitriviaEvents(
-          defaultHistoricalEvents,
-          take: 15,
-        );
-      }
+      externalEvents = DailyChallengeService.getSeededWikitriviaEvents(
+        defaultHistoricalEvents,
+        take: 15,
+      );
     }
     
     setState(() {

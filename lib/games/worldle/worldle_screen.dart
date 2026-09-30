@@ -54,16 +54,7 @@ class _WorldleScreenState extends State<WorldleScreen>
   Future<void> _initGame() async {
     Country target;
     if (widget.isDailyMode) {
-      final firebaseCode = await DailyChallengeService().getWorldleChallenge();
-      if (firebaseCode != null) {
-        target = allCountries.firstWhere(
-          (c) => c.isoCode == firebaseCode,
-          orElse: () => allCountries[DailyChallengeService.getSeededWorldleIndex(allCountries.length)],
-        );
-      } else {
-        // Seed tabanlı deterministik ülke seçimi (TSİ)
-        target = allCountries[DailyChallengeService.getSeededWorldleIndex(allCountries.length)];
-      }
+      target = allCountries[DailyChallengeService.getSeededWorldleIndex(allCountries.length)];
     } else {
       target = getRandomCountry();
     }

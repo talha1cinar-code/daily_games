@@ -16,7 +16,7 @@ import 'rgble_game.dart';
 ///       → HSV renk seçici → Puan → Sonraki round...  → Final skor
 class RgbleScreen extends StatefulWidget {
   final bool isDailyMode;
-  final void Function(double score)? onGameComplete;
+  final void Function(double score, [int durationMs])? onGameComplete;
   const RgbleScreen({super.key, this.isDailyMode = true, this.onGameComplete});
 
   @override
@@ -99,7 +99,7 @@ class _RgbleScreenState extends State<RgbleScreen>
   Future<void> _initGame() async {
     List<Color>? colors;
     if (widget.isDailyMode) {
-      colors = await DailyChallengeService().getRgbleChallenge();
+      colors = DailyChallengeService.getSeededRgbleColors();
     }
     
     setState(() {
@@ -249,7 +249,7 @@ class _RgbleScreenState extends State<RgbleScreen>
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    return GameExitWrapper(gameId: 'rgble', isDailyMode: widget.isDailyMode, child: Scaffold(
+    return GameExitWrapper(gameId: 'rgble', isDailyMode: widget.isDailyMode, onGameComplete: widget.onGameComplete, child: Scaffold(
       backgroundColor: const Color(0xFF1B1B2F),
       body: SafeArea(
         child: switch (_phase) {

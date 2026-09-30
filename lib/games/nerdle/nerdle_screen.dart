@@ -127,9 +127,9 @@ class _NerdleScreenState extends State<NerdleScreen>
   Future<void> _initGame() async {
     String eq;
     if (widget.isDailyMode) {
-      // Önce Firebase override, yoksa seed tabanlı deterministik seçim
-      String? firebaseEq = await DailyChallengeService().getNerdleChallenge();
-      eq = firebaseEq ?? DailyChallengeService.getSeededNerdleEquation(NerdleGame.equations);
+
+
+      eq = DailyChallengeService.getSeededNerdleEquation(NerdleGame.equations);
     } else {
       eq = NerdleGame.getRandomEquation();
     }

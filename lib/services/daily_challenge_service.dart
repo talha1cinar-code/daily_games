@@ -46,7 +46,8 @@ class DailyChallengeService {
       final doc = await _firestore
           .collection('daily_challenges')
           .doc(dateKey)
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 3));
 
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;

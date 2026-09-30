@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../widgets/game_exit_wrapper.dart';
@@ -22,7 +22,7 @@ enum _GamePhase {
 
 class SoundScreen extends StatefulWidget {
   final bool isDailyMode;
-  final void Function(double score)? onGameComplete;
+  final void Function(double score, [int durationMs])? onGameComplete;
   const SoundScreen({super.key, this.isDailyMode = true, this.onGameComplete});
 
   @override
@@ -69,7 +69,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
   Future<void> _initGame() async {
     List<double>? freqs;
     if (widget.isDailyMode) {
-      freqs = await DailyChallengeService().getSoundChallenge();
+      freqs = DailyChallengeService.getSeededSoundFrequencies();
     }
     
     setState(() {
@@ -447,11 +447,11 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
     }
 
     if (_phase == _GamePhase.idle) {
-      return GameExitWrapper(gameId: 'sound', isDailyMode: widget.isDailyMode, child: Scaffold(backgroundColor: Colors.black, body: _buildIdleScreen()));
+      return GameExitWrapper(gameId: 'sound', isDailyMode: widget.isDailyMode, onGameComplete: widget.onGameComplete, child: Scaffold(backgroundColor: Colors.black, body: _buildIdleScreen()));
     } else if (_phase == _GamePhase.countdown) {
-      return GameExitWrapper(gameId: 'sound', isDailyMode: widget.isDailyMode, child: Scaffold(backgroundColor: Colors.black, body: _buildCountdownScreen()));
+      return GameExitWrapper(gameId: 'sound', isDailyMode: widget.isDailyMode, onGameComplete: widget.onGameComplete, child: Scaffold(backgroundColor: Colors.black, body: _buildCountdownScreen()));
     } else if (_phase == _GamePhase.gameOver) {
-      return GameExitWrapper(gameId: 'sound', isDailyMode: widget.isDailyMode, child: Scaffold(backgroundColor: Colors.black, body: _buildGameOverScreen()));
+      return GameExitWrapper(gameId: 'sound', isDailyMode: widget.isDailyMode, onGameComplete: widget.onGameComplete, child: Scaffold(backgroundColor: Colors.black, body: _buildGameOverScreen()));
     }
 
     // Gösterilecek frekans (Eğer hedef çalıyorsa hedefi, değilse tahmini gösterir)
@@ -466,7 +466,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
                         _phase == _GamePhase.guess || 
                         _phase == _GamePhase.showScore;
 
-    return GameExitWrapper(gameId: 'sound', isDailyMode: widget.isDailyMode, child: Scaffold(
+    return GameExitWrapper(gameId: 'sound', isDailyMode: widget.isDailyMode, onGameComplete: widget.onGameComplete, child: Scaffold(
       backgroundColor: Colors.black,
       body: GestureDetector(
         onPanStart: _onPanStart,
