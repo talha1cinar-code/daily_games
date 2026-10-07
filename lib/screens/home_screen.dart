@@ -9,6 +9,7 @@ import 'profile_screen.dart';
 import 'daily_run_screen.dart';
 import '../services/daily_run_service.dart';
 import '../services/leaderboard_service.dart';
+import '../services/streak_service.dart';
 import 'leaderboard_screen.dart';
 import '../utils/network_utils.dart';
 
@@ -413,10 +414,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 begin: const Offset(0, 0.4),
                                 end: Offset.zero,
                               ).animate(_card3Animation),
-                              child: _GameButton(
-                                title: 'Seri',
-                                glowColor: const Color(0xFFFF007F), // Neon pink glow
-                                height: 80,
+                              child: _StreakButton(
                                 onTap: _navigateToProfile,
                               ),
                             ),
@@ -878,5 +876,124 @@ class _DailyRunLeaderboardWidgetState extends State<_DailyRunLeaderboardWidget> 
       return name.substring(0, hashIndex).trim();
     }
     return name;
+  }
+}
+
+class _StreakButton extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _StreakButton({required this.onTap});
+
+  @override
+  State<_StreakButton> createState() => _StreakButtonState();
+}
+
+class _StreakButtonState extends State<_StreakButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pressController;
+  late Animation<double> _pressAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressController = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+    );
+    _pressAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _pressController, curve: Curves.easeInOut),
+    );
+    StreakService().addListener(_onStreakChanged);
+  }
+
+  void _onStreakChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _pressController.dispose();
+    StreakService().removeListener(_onStreakChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const glowColor = Color(0xFFFF007F);
+    final streak = StreakService().currentStreak;
+
+    return AnimatedBuilder(
+      animation: _pressAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _pressAnimation.value,
+          child: child,
+        );
+      },
+      child: GestureDetector(
+        onTapDown: (_) => _pressController.forward(),
+        onTapUp: (_) => _pressController.reverse(),
+        onTapCancel: () => _pressController.reverse(),
+        onTap: () {
+          SoundService().playKeyTap();
+          widget.onTap();
+        },
+        child: Container(
+          width: double.infinity,
+          height: 80,
+          decoration: BoxDecoration(
+            color: glowColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: [
+              BoxShadow(
+                color: glowColor.withValues(alpha: 0.6),
+                blurRadius: 24,
+                spreadRadius: 2,
+              ),
+            ],
+            border: Border.all(
+              color: glowColor,
+              width: 3.0,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Seri',
+                style: GoogleFonts.nunito(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                  shadows: const [Shadow(color: glowColor, blurRadius: 10)],
+                ),
+              ),
+              if (streak > 0) ...[
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF6E40).withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFFFF6E40).withValues(alpha: 0.6),
+                    ),
+                  ),
+                  child: Text(
+                    '$streak 🔥',
+                    style: GoogleFonts.nunito(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -12,6 +12,7 @@ import 'services/leaderboard_service.dart';
 import 'services/sound_service.dart';
 import 'services/daily_run_service.dart';
 import 'services/notification_service.dart';
+import 'services/streak_service.dart';
 import 'services/ad_service.dart';
 import 'utils/network_utils.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -41,10 +42,9 @@ void main() async {
   await LeaderboardService().init();
   await DailyRunService().init();
   await NetworkUtils.syncTime();
+  await StreakService().init();
   
   await NotificationService().init();
-  await NotificationService().requestPermissions();
-  await NotificationService().scheduleDailyNotifications();
   
   await MobileAds.instance.initialize();
   AdService().init();
@@ -70,6 +70,10 @@ class _DailyGamesAppState extends State<DailyGamesApp> with WidgetsBindingObserv
       if (mounted) {
         SoundService().updateBgmState();
       }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await NotificationService().scheduleDailyNotifications();
     });
   }
 

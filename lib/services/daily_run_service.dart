@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'leaderboard_service.dart';
 import 'stats_service.dart';
 import 'notification_service.dart';
+import 'streak_service.dart';
 import '../utils/network_utils.dart';
 
 /// Daily Run oturumunu ve ilerlemesini yöneten servis.
@@ -145,6 +146,19 @@ class DailyRunService extends ChangeNotifier {
     return progress.isStarted && !progress.isCompleted;
   }
 
+  /// Belirli bir slotun (1 veya 2) bugün için başlatılıp başlatılmadığını kontrol eder
+  bool isRunStartedToday(int slot) {
+    final key = '$_prefsKeyPrefix${_runKey(slot)}';
+    final jsonStr = _prefs?.getString(key);
+    if (jsonStr != null) {
+      try {
+        final progress = DailyRunProgress.fromJson(jsonDecode(jsonStr));
+        return progress.isStarted;
+      } catch (_) {}
+    }
+    return false;
+  }
+
   Future<void> saveGameScore(String gameId, double score, [int durationMs = 0]) async {
     final activeKey = _prefs?.getString('active_run_key');
     DailyRunProgress progress;
@@ -174,6 +188,8 @@ class DailyRunService extends ChangeNotifier {
 
     if (progress.isCompleted) {
       await _submitScoreForProgress(progress);
+      // Seri güncelle
+      await StreakService().onDailyRunCompleted();
     }
     
     notifyListeners();

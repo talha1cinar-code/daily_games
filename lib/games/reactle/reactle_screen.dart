@@ -176,7 +176,10 @@ class _ReactleScreenState extends State<ReactleScreen>
         });
 
         Future.delayed(const Duration(milliseconds: 1500), () {
-          if (mounted) _startRound(); // Round tekrar
+          if (mounted) {
+            _round--; // Round tekrar oynanması için geri alıyoruz
+            _startRound(); 
+          }
         });
         break;
 

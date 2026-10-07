@@ -3,7 +3,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
 import 'dart:io';
-
+import 'daily_run_service.dart';
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -76,8 +76,8 @@ class NotificationService {
   Future<void> scheduleDailyNotifications() async {
     await _scheduleDailyNotification(
       id: _morningRunStartId,
-      title: 'Günün İlk Daily Run\'ı Hazır!',
-      body: 'Sabah oturumu başladı. Günlük kelimeni ve oyunlarını oynamayı unutma!',
+      title: 'Sabah Daily Run\'ı Başladı!',
+      body: 'Oyunlar yenilendi. Hemen Oyna',
       hour: 12, // Kullanıcı isteği: Gündüz 12
       minute: 0,
     );
@@ -85,27 +85,33 @@ class NotificationService {
     await _scheduleDailyNotification(
       id: _eveningRunStartId,
       title: 'Akşam Daily Run\'ı Başladı!',
-      body: 'Akşam oturumu için oyunlar yenilendi. Hemen oyna!',
+      body: 'Oyunlar yenilendi. Hemen Oyna',
       hour: 17, // Akşam 17:00
       minute: 0,
     );
 
-    // Hatırlatıcılar da varsayılan olarak her gün için kurulur.
-    // Oynandıkça `daily_run_service` içinden bugününki iptal edilir.
+    // Sabah oturumu bugün başlatılmışsa (veya tamamlandıysa),
+    // bugünün hatırlatıcısını atla, yarına kur (tekrarlayan olacağı için her gün kurar ama ilk tetiklenme yarın olur)
+    bool skipMorningReminderToday = DailyRunService().isRunStartedToday(1);
     await _scheduleDailyNotification(
       id: _morningRunReminderId,
-      title: 'Sabah Oturumu Bitmek Üzere!',
+      title: 'Sabah Daily Run\'ı Bitmek Üzere',
       body: 'Sabah oyunlarını tamamlamak için son 1 saatin kaldı.',
       hour: 16, // Bitime 1 saat kala (16:00)
       minute: 0,
+      skipToday: skipMorningReminderToday,
     );
 
+    // Akşam oturumu bugün başlatılmışsa (veya tamamlandıysa),
+    // bugünün hatırlatıcısını atla, yarına kur.
+    bool skipEveningReminderToday = DailyRunService().isRunStartedToday(2);
     await _scheduleDailyNotification(
       id: _eveningRunReminderId,
-      title: 'Akşam Oturumu Bitmek Üzere!',
-      body: 'Akşam oyunlarını tamamlamak için son 1 saatin kaldı. Günü boş geçme!',
+      title: 'Akşam Daily Run\'ı Bitmek Üzere',
+      body: 'Akşam oyunlarını tamamlamak için son 1 saatin kaldı.',
       hour: 23, // Bitime 1 saat kala (23:00)
       minute: 0,
+      skipToday: skipEveningReminderToday,
     );
   }
 
@@ -115,12 +121,13 @@ class NotificationService {
     required String body,
     required int hour,
     required int minute,
+    bool skipToday = false,
   }) async {
     await flutterLocalNotificationsPlugin.zonedSchedule(
       id: id,
       title: title,
       body: body,
-      scheduledDate: _nextInstanceOfTime(hour, minute),
+      scheduledDate: _nextInstanceOfTime(hour, minute, skipToday: skipToday),
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           'daily_run_channel',
@@ -141,12 +148,19 @@ class NotificationService {
     );
   }
 
-  tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
+  tz.TZDateTime _nextInstanceOfTime(int hour, int minute, {bool skipToday = false}) {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     tz.TZDateTime scheduledDate =
         tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    if (scheduledDate.isBefore(now) || skipToday) {
+      // Eğer saat geçmişse veya skipToday istenmişse bir sonraki güne at
+      // Ancak saat zaten geçmişse ve skipToday true ise bir gün daha atlamamalıyız.
+      // Sadece tek bir gün atmak yeterlidir, çünkü amaç 'bugün' için çalmamasıdır.
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      } else if (skipToday) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
     }
     return scheduledDate;
   }
@@ -164,5 +178,74 @@ class NotificationService {
   /// Tüm bildirimleri iptal eder (Ayarlardan kapatıldığında)
   Future<void> cancelAll() async {
     await flutterLocalNotificationsPlugin.cancelAll();
+  }
+
+  /// Seri durumuna göre bildirimleri programlar
+  Future<void> scheduleStreakNotifications(int freezeCount) async {
+    // Önceki seri bildirimlerini temizle
+    for (int i = 0; i < 5; i++) {
+      await flutterLocalNotificationsPlugin.cancel(id: 301 + i);
+    }
+
+    final now = tz.TZDateTime.now(tz.local);
+    // Bugünün 10:00'u referans alınarak üzerine eklenecek
+    final baseDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, 10, 0);
+
+    for (int i = 0; i <= freezeCount; i++) {
+      final notificationDate = baseDate.add(Duration(days: 2 + i));
+      final id = 301 + i;
+      
+      // Eğer saat 10:00 geçmiş ve 0. gün eklenecek olsaydı diye kontrol ama
+      // +2 gün olduğu için geçmiş olma ihtimali yok.
+      
+      if (i < freezeCount) {
+        // Donma kullanıldı bildirimi
+        await _scheduleOneTimeNotification(
+          id: id,
+          title: 'Serin Kurtarıldı',
+          body: '1 Dondurma hakkın kullanıldı, şuanki Daily Run\'a katıl ve serini kurtar',
+          scheduledDate: notificationDate,
+        );
+      } else {
+        // Seri tamamen sıfırlandı bildirimi
+        await _scheduleOneTimeNotification(
+          id: id,
+          title: 'Serin Sıfırlandı!',
+          body: 'Oyuna gir belki kurtarma hakkı kazanırsın',
+          scheduledDate: notificationDate,
+        );
+      }
+    }
+  }
+
+  Future<void> _scheduleOneTimeNotification({
+    required int id,
+    required String title,
+    required String body,
+    required tz.TZDateTime scheduledDate,
+  }) async {
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: scheduledDate,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'streak_channel',
+          'Seri Bildirimleri',
+          channelDescription: 'Seri durumu ve dondurma hakkı bildirimleri',
+          importance: Importance.max,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: null, // Tek seferlik
+    );
   }
 }
