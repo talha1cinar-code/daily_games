@@ -7,6 +7,7 @@ import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
 import '../../services/daily_challenge_service.dart';
+import '../../services/language_service.dart';
 
 class HuedleScreen extends StatefulWidget {
   final bool isDailyMode;
@@ -266,7 +267,7 @@ class _HuedleScreenState extends State<HuedleScreen>
             : _score >= 100
                 ? '👍'
                 : '😅';
-    final title = _score >= 300 ? 'Harika!' : 'Oyun Bitti!';
+    final title = _score >= 300 ? (LanguageService().currentLanguage == 'tr' ? 'Harika!' : 'Great!') : (LanguageService().currentLanguage == 'tr' ? 'Oyun Bitti!' : 'Game Over!');
     final titleColor =
         _score >= 300 ? Colors.greenAccent : Colors.orangeAccent;
 
@@ -309,7 +310,7 @@ class _HuedleScreenState extends State<HuedleScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            '$_score Puan',
+            LanguageService().currentLanguage == 'tr' ? '$_score Puan' : '$_score Points',
             style: GoogleFonts.outfit(
               fontSize: 28,
               color: Colors.white,
@@ -318,7 +319,7 @@ class _HuedleScreenState extends State<HuedleScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'Seviye ${_level - 1} • ${_gridSize}x$_gridSize Grid',
+            LanguageService().currentLanguage == 'tr' ? 'Seviye ${_level - 1} • ${_gridSize}x$_gridSize Grid' : 'Level ${_level - 1} • ${_gridSize}x$_gridSize Grid',
             style: GoogleFonts.outfit(
               fontSize: 16,
               color: Colors.white54,
@@ -346,7 +347,7 @@ class _HuedleScreenState extends State<HuedleScreen>
                 elevation: 0,
               ),
               child: Text(
-                widget.onGameComplete != null ? 'Sonraki' : 'Kapat',
+                widget.onGameComplete != null ? (LanguageService().currentLanguage == 'tr' ? 'Sonraki' : 'Next') : (LanguageService().currentLanguage == 'tr' ? 'Kapat' : 'Close'),
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -428,7 +429,7 @@ class _HuedleScreenState extends State<HuedleScreen>
                 ),
               ),
               Text(
-                'Farklı rengi bul!',
+                LanguageService().isTurkish ? 'Farklı rengi bul!' : 'Find the different color!',
                 style: GoogleFonts.outfit(
                   fontSize: 12,
                   color: Colors.white38,
@@ -482,19 +483,19 @@ class _HuedleScreenState extends State<HuedleScreen>
     IconData difficultyIcon;
 
     if (_level <= 2) {
-      difficultyText = 'Kolay';
+      difficultyText = LanguageService().isTurkish ? 'Kolay' : 'Easy';
       difficultyColor = Colors.greenAccent;
       difficultyIcon = Icons.sentiment_satisfied_rounded;
     } else if (_level <= 5) {
-      difficultyText = 'Orta';
+      difficultyText = LanguageService().isTurkish ? 'Orta' : 'Medium';
       difficultyColor = Colors.orangeAccent;
       difficultyIcon = Icons.sentiment_neutral_rounded;
     } else if (_level <= 10) {
-      difficultyText = 'Zor';
+      difficultyText = LanguageService().isTurkish ? 'Zor' : 'Hard';
       difficultyColor = Colors.redAccent;
       difficultyIcon = Icons.sentiment_dissatisfied_rounded;
     } else {
-      difficultyText = 'Uzman';
+      difficultyText = LanguageService().isTurkish ? 'Uzman' : 'Expert';
       difficultyColor = Colors.purpleAccent;
       difficultyIcon = Icons.local_fire_department_rounded;
     }
@@ -506,7 +507,7 @@ class _HuedleScreenState extends State<HuedleScreen>
           // Seviye
           _buildInfoChip(
             icon: Icons.layers_rounded,
-            label: 'Seviye $_level',
+            label: LanguageService().currentLanguage == 'tr' ? 'Seviye $_level' : 'Level $_level',
             color: Colors.cyanAccent,
           ),
           const SizedBox(width: 10),
@@ -697,7 +698,7 @@ class _HuedleScreenState extends State<HuedleScreen>
                         color: Colors.greenAccent, size: 22),
                     const SizedBox(width: 8),
                     Text(
-                      '+${_getLevelScore()} Puan!',
+                      LanguageService().currentLanguage == 'tr' ? '+${_getLevelScore()} Puan!' : '+${_getLevelScore()} Points!',
                       style: GoogleFonts.outfit(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,

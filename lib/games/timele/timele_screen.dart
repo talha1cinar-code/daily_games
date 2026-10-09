@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../services/app_strings.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../widgets/game_exit_wrapper.dart';
@@ -9,6 +10,7 @@ import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
 import 'timele_game.dart';
+import '../../services/language_service.dart';
 
 enum _GamePhase {
   idle,
@@ -94,13 +96,13 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
   }
 
   Future<void> _playCountdownAnimation() async {
-    setState(() => _countdownText = 'Hazır');
+    setState(() => _countdownText = LanguageService().isTurkish ? 'Hazır' : 'Ready');
     _textScaleController.forward(from: 0.0);
     _appSound.playFlip();
     await Future.delayed(const Duration(milliseconds: 1000));
     if (!mounted) return;
 
-    setState(() => _countdownText = 'Başla!');
+    setState(() => _countdownText = LanguageService().isTurkish ? 'Başla!' : 'Go!');
     _textScaleController.forward(from: 0.0);
     _appSound.playWin();
     await Future.delayed(const Duration(milliseconds: 800));
@@ -270,7 +272,7 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
               ),
               const SizedBox(height: 16),
               Text(
-                'Ekranda çıkan efekti izle,\naynı süreyi basılı tutarak tekrarla!',
+                LanguageService().isTurkish ? 'Ekranda çıkan efekti izle,\naynı süreyi basılı tutarak tekrarla!' : 'Watch the effect on screen,\nhold to repeat the same duration!',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.nunito(
                   color: Colors.white70,
@@ -291,7 +293,7 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
                   elevation: 8,
                 ),
                 child: Text(
-                  'BAŞLA',
+                  AppStrings.start,
                   style: GoogleFonts.nunito(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
@@ -351,7 +353,7 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
                 const Text('⏳', style: TextStyle(fontSize: 64)),
                 const SizedBox(height: 16),
                 Text(
-                  'Oyun Bitti!',
+                  LanguageService().currentLanguage == 'tr' ? 'Oyun Bitti!' : 'Game Over!',
                   style: GoogleFonts.nunito(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -388,7 +390,7 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: Text(widget.onGameComplete != null ? 'Sonraki' : 'Ana Menü',
+                    child: Text(widget.onGameComplete != null ? (LanguageService().currentLanguage == 'tr' ? 'Sonraki' : 'Next') : (LanguageService().currentLanguage == 'tr' ? 'Ana Menü' : 'Main Menu'),
                         style: GoogleFonts.nunito(
                             fontSize: 18,
                             fontWeight: FontWeight.w800)),
@@ -443,7 +445,7 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
             if (_phase == _GamePhase.showEffect)
               Center(
                 child: Text(
-                  'Efekti İzle...',
+                  LanguageService().isTurkish ? 'Efekti İzle...' : 'Watch the Effect...',
                   style: GoogleFonts.nunito(
                     color: Colors.white,
                     fontSize: 32,
@@ -461,7 +463,7 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
                     const Icon(Icons.touch_app_rounded, color: Colors.white, size: 64),
                     const SizedBox(height: 24),
                     Text(
-                      'Sıra Sende!',
+                      LanguageService().isTurkish ? 'Sıra Sende!' : 'Your Turn!',
                       style: GoogleFonts.nunito(
                         color: Colors.white,
                         fontSize: 32,
@@ -470,7 +472,7 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Aynı süreyi tutturmak için\nekrana basılı tut',
+                      LanguageService().isTurkish ? 'Aynı süreyi tutturmak için\nekrana basılı tut' : 'Hold the screen\nto match the duration',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.nunito(
                         color: Colors.white70,
@@ -489,7 +491,7 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
                 right: 0,
                 child: Center(
                   child: Text(
-                    '${(_guessedDuration / 1000).toStringAsFixed(2)} sn',
+                    '${(_guessedDuration / 1000).toStringAsFixed(2)} ${LanguageService().isTurkish ? 'sn' : 's'}',
                     style: GoogleFonts.nunito(
                       color: Colors.white,
                       fontSize: 48,
@@ -530,7 +532,7 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
                         children: [
                           Column(
                             children: [
-                              Text('Hedef', style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16)),
+                              Text(LanguageService().currentLanguage == 'tr' ? 'Hedef' : 'Target', style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16)),
                               Text('${(_game.targetDurations[_game.currentRound - 1] / 1000).toStringAsFixed(2)}s', 
                                 style: GoogleFonts.nunito(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                             ],
@@ -540,7 +542,7 @@ class _TimeleScreenState extends State<TimeleScreen> with TickerProviderStateMix
                           const SizedBox(width: 32),
                           Column(
                             children: [
-                              Text('Tahminin', style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16)),
+                              Text(LanguageService().currentLanguage == 'tr' ? 'Tahminin' : 'Your Guess', style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16)),
                               Text('${(_game.guessedDurations[_game.currentRound - 1] / 1000).toStringAsFixed(2)}s', 
                                 style: GoogleFonts.nunito(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                             ],

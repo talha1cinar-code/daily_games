@@ -1,4 +1,5 @@
 import 'wikitrivia_data.dart';
+import '../../services/language_service.dart';
 
 /// Wikitrivia oyununun veri modeli ve mantığı
 class HistoricalEvent {
@@ -51,7 +52,7 @@ class WikitriviaGame {
 
   void _initGame({List<HistoricalEvent>? externalEvents}) {
     // Dışarıdan olay geldiyse onu, gelmediyse varsayılan çevrimdışı arşivimizi kullan
-    final sourceEvents = externalEvents ?? defaultHistoricalEvents;
+    final sourceEvents = externalEvents ?? (LanguageService().currentLanguage == 'tr' ? defaultHistoricalEventsTr : defaultHistoricalEventsEn);
     
     // Olayları karıştır
     final shuffled = List<HistoricalEvent>.from(sourceEvents)..shuffle();

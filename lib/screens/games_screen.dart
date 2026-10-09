@@ -17,6 +17,8 @@ import '../games/memorle/memorle_screen.dart';
 import '../games/reactle/reactle_screen.dart';
 import '../widgets/game_details_bottom_sheet.dart';
 import '../services/sound_service.dart';
+import '../services/app_strings.dart';
+import '../widgets/logo_background.dart';
 
 class GamesScreen extends StatefulWidget {
   const GamesScreen({super.key});
@@ -135,7 +137,10 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: SafeArea(
+        body: Stack(
+          children: [
+            const LogoBackground(),
+            SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -168,7 +173,7 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
                   ),
                   const SizedBox(width: 16),
                   Text(
-                    'Oyunlar',
+                    AppStrings.games,
                     style: GoogleFonts.nunito(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
@@ -186,7 +191,7 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      '${games.length} oyun',
+                      AppStrings.gameCount(games.length),
                       style: GoogleFonts.nunito(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -232,6 +237,8 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
           ],
         ),
       ),
-    ));
+    ],
+  ),
+));
   }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../theme/app_theme.dart';
+import '../../../services/language_service.dart';
+import '../../../services/app_strings.dart';
 import '../wordle_game.dart';
 
-/// Türkçe Q klavye düzeni — ekran genişliğine responsive
+/// Dile göre Q/QWERTY klavye düzeni — ekran genişliğine responsive
 class WordleKeyboard extends StatelessWidget {
   final Map<String, LetterStatus> keyStatuses;
   final void Function(String letter) onLetterTap;
@@ -19,18 +21,28 @@ class WordleKeyboard extends StatelessWidget {
   });
 
   // Türkçe Q klavye düzeni
-  static const List<List<String>> _rows = [
+  static const List<List<String>> _rowsTr = [
     ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'Ğ', 'Ü'],
     ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ş', 'İ'],
     ['ENT', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'Ö', 'Ç', '⌫'],
   ];
 
+  // İngilizce QWERTY klavye düzeni
+  static const List<List<String>> _rowsEn = [
+    ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+    ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+    ['ENT', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '⌫'],
+  ];
+
+  List<List<String>> get _rows =>
+      LanguageService().isTurkish ? _rowsTr : _rowsEn;
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // İlk satır 12 harf + padding = en geniş satır
-        final maxKeysInRow = 12;
+        // En geniş satırdaki tuş sayısı
+        final maxKeysInRow = _rows.map((r) => r.length).reduce((a, b) => a > b ? a : b);
         final totalHPadding = 2.0 * 2 * maxKeysInRow; // her tuşun sağ-sol padding'i
         final availableWidth = constraints.maxWidth - totalHPadding;
         final keyWidth = (availableWidth / maxKeysInRow).clamp(26.0, 36.0);
@@ -49,7 +61,7 @@ class WordleKeyboard extends StatelessWidget {
                 children: row.map((key) {
                   if (key == 'ENT') {
                     return _buildSpecialKey(
-                      label: 'GİR',
+                      label: AppStrings.enterKey,
                       onTap: onEnterTap,
                       color: AppColors.primary,
                       textColor: Colors.white,

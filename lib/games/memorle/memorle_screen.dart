@@ -8,6 +8,8 @@ import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
 import '../../services/daily_challenge_service.dart';
+import '../../services/app_strings.dart';
+import '../../services/language_service.dart';
 
 class MemorleScreen extends StatefulWidget {
   final bool isDailyMode;
@@ -343,7 +345,7 @@ class _MemorleScreenState extends State<MemorleScreen>
             : _score >= 100
                 ? '👍'
                 : '😅';
-    final title = _score >= 200 ? 'Müthiş Hafıza!' : 'Oyun Bitti!';
+    final title = _score >= 200 ? (LanguageService().currentLanguage == 'tr' ? 'Müthiş Hafıza!' : 'Amazing Memory!') : (LanguageService().currentLanguage == 'tr' ? 'Oyun Bitti!' : 'Game Over!');
     final titleColor =
         _score >= 200 ? Colors.cyanAccent : Colors.orangeAccent;
 
@@ -385,7 +387,7 @@ class _MemorleScreenState extends State<MemorleScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            '$_score Puan',
+            LanguageService().currentLanguage == 'tr' ? '$_score Puan' : '$_score Points',
             style: GoogleFonts.outfit(
               fontSize: 28,
               color: Colors.white,
@@ -394,7 +396,7 @@ class _MemorleScreenState extends State<MemorleScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'Seviye ${_level - 1} • ${_getDigitCount()} Basamak',
+            LanguageService().currentLanguage == 'tr' ? 'Seviye ${_level - 1} • ${_getDigitCount()} Basamak' : 'Level ${_level - 1} • ${_getDigitCount()} Digits',
             style: GoogleFonts.outfit(
               fontSize: 16,
               color: Colors.white54,
@@ -412,7 +414,7 @@ class _MemorleScreenState extends State<MemorleScreen>
               child: Column(
                 children: [
                   Text(
-                    'Doğru Cevap',
+                    LanguageService().currentLanguage == 'tr' ? 'Doğru Cevap' : 'Correct Answer',
                     style: GoogleFonts.outfit(
                       fontSize: 13,
                       color: Colors.white38,
@@ -431,7 +433,7 @@ class _MemorleScreenState extends State<MemorleScreen>
                   if (_userInput.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Senin Cevabın',
+                      LanguageService().isTurkish ? 'Senin Cevabın' : 'Your Answer',
                       style: GoogleFonts.outfit(
                         fontSize: 13,
                         color: Colors.white38,
@@ -473,7 +475,7 @@ class _MemorleScreenState extends State<MemorleScreen>
                 elevation: 0,
               ),
               child: Text(
-                widget.onGameComplete != null ? 'Sonraki' : 'Kapat',
+                widget.onGameComplete != null ? (LanguageService().currentLanguage == 'tr' ? 'Sonraki' : 'Next') : (LanguageService().currentLanguage == 'tr' ? 'Kapat' : 'Close'),
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -553,7 +555,7 @@ class _MemorleScreenState extends State<MemorleScreen>
                 ),
               ),
               Text(
-                'Sayıları hafızana al!',
+                LanguageService().isTurkish ? 'Sayıları hafızana al!' : 'Memorize the numbers!',
                 style: GoogleFonts.outfit(
                   fontSize: 12,
                   color: Colors.white38,
@@ -602,13 +604,13 @@ class _MemorleScreenState extends State<MemorleScreen>
         children: [
           _buildChip(
             icon: Icons.layers_rounded,
-            label: 'Seviye $_level',
+            label: LanguageService().currentLanguage == 'tr' ? 'Seviye $_level' : 'Level $_level',
             color: Colors.cyanAccent,
           ),
           const SizedBox(width: 10),
           _buildChip(
             icon: Icons.pin_rounded,
-            label: '${_getDigitCount()} Basamak',
+            label: LanguageService().isTurkish ? '${_getDigitCount()} Basamak' : '${_getDigitCount()} Digits',
             color: Colors.purpleAccent,
           ),
           const Spacer(),
@@ -715,7 +717,7 @@ class _MemorleScreenState extends State<MemorleScreen>
         ),
         const SizedBox(height: 24),
         Text(
-          'Sayıları Hafızana Al',
+          LanguageService().isTurkish ? 'Sayıları Hafızana Al' : 'Memorize the Numbers',
           style: GoogleFonts.outfit(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -724,7 +726,7 @@ class _MemorleScreenState extends State<MemorleScreen>
         ),
         const SizedBox(height: 8),
         Text(
-          '${_getDigitCount()} basamaklı sayı gösterilecek',
+          LanguageService().currentLanguage == 'tr' ? '${_getDigitCount()} basamaklı sayı gösterilecek' : '${_getDigitCount()}-digit number will be shown',
           style: GoogleFonts.outfit(
             fontSize: 15,
             color: Colors.white54,
@@ -753,7 +755,7 @@ class _MemorleScreenState extends State<MemorleScreen>
               ],
             ),
             child: Text(
-              _level == 1 ? 'Başla' : 'Devam',
+              _level == 1 ? AppStrings.start : (LanguageService().currentLanguage == 'tr' ? 'Devam' : 'Continue'),
               style: GoogleFonts.outfit(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -948,7 +950,7 @@ class _MemorleScreenState extends State<MemorleScreen>
         ),
         const SizedBox(height: 16),
         Text(
-          'Gördüğün sayıyı gir',
+          LanguageService().isTurkish ? 'Gördüğün sayıyı gir' : 'Enter the number you saw',
           style: GoogleFonts.outfit(
             fontSize: 14,
             color: Colors.white38,
@@ -994,7 +996,7 @@ class _MemorleScreenState extends State<MemorleScreen>
           ),
           const SizedBox(height: 20),
           Text(
-            'Doğru! +${_getLevelScore()}',
+            LanguageService().currentLanguage == 'tr' ? 'Doğru! +${_getLevelScore()}' : 'Correct! +${_getLevelScore()}',
             style: GoogleFonts.outfit(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -1024,7 +1026,7 @@ class _MemorleScreenState extends State<MemorleScreen>
         ),
         const SizedBox(height: 20),
         Text(
-          'Yanlış!',
+          LanguageService().currentLanguage == 'tr' ? 'Yanlış!' : 'Wrong!',
           style: GoogleFonts.outfit(
             fontSize: 28,
             fontWeight: FontWeight.bold,

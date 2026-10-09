@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/settings_service.dart';
 import '../services/sound_service.dart';
+import '../services/language_service.dart';
+import '../services/app_strings.dart';
 import 'games_screen.dart';
 import 'profile_screen.dart';
 import 'daily_run_screen.dart';
@@ -12,6 +14,7 @@ import '../services/leaderboard_service.dart';
 import '../services/streak_service.dart';
 import 'leaderboard_screen.dart';
 import '../utils/network_utils.dart';
+import '../widgets/logo_background.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -132,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Ayarlar',
+                        AppStrings.settings,
                         style: GoogleFonts.nunito(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
@@ -140,9 +143,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                       ),
                       const SizedBox(height: 24),
+                      // Dil seçici
+                      _buildLanguageRow(
+                        onChanged: () {
+                          LanguageService().toggleLanguage();
+                          setDialogState(() {});
+                          setState(() {});
+                        },
+                      ),
+                      const SizedBox(height: 16),
                       _buildSettingRow(
                         icon: Icons.music_note_rounded,
-                        title: 'Müzik',
+                        title: AppStrings.music,
                         value: SettingsService().isMusicEnabled,
                         onChanged: (val) {
                           SettingsService().toggleMusic();
@@ -153,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       const SizedBox(height: 16),
                       _buildSettingRow(
                         icon: Icons.volume_up_rounded,
-                        title: 'Ses Efektleri',
+                        title: AppStrings.soundEffects,
                         value: SettingsService().isSfxEnabled,
                         onChanged: (val) {
                           SettingsService().toggleSfx();
@@ -163,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       const SizedBox(height: 16),
                       _buildSettingRow(
                         icon: Icons.vibration_rounded,
-                        title: 'Titreşim',
+                        title: AppStrings.vibration,
                         value: SettingsService().isVibrationEnabled,
                         onChanged: (val) {
                           SettingsService().toggleVibration();
@@ -182,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                         ),
                         child: Text(
-                          'Kapat',
+                          AppStrings.close,
                           style: GoogleFonts.nunito(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -239,23 +251,82 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildLanguageRow({required VoidCallback onChanged}) {
+    return GestureDetector(
+      onTap: onChanged,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.language_rounded, color: Colors.white.withValues(alpha: 0.8), size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                AppStrings.language,
+                style: GoogleFonts.nunito(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.secondary.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.secondary.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    LanguageService().isTurkish ? '🇹🇷' : '🇬🇧',
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    AppStrings.languageValue,
+                    style: GoogleFonts.nunito(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF121212),
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
-              Color(0xFF5E35B1), // Deep purple top
-              Color(0xFF121212), // Dark background bottom
+              Color(0xFF2E0854), // Vibrant deep purple
+              Color(0xFF0F3460), // Deep blue
+              Color(0xFF16213E), // Dark slate blue
             ],
-            stops: [0.0, 0.6],
           ),
         ),
-        child: SafeArea(
+        child: Stack(
+          children: [
+            const LogoBackground(),
+            SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
@@ -296,53 +367,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ],
                             ),
                           ),
-                          const Spacer(flex: 3),
+                          const Spacer(flex: 1),
                           FadeTransition(
                             opacity: _fadeAnimation,
                             child: Center(
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'DAILY',
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 46,
-                                      fontWeight: FontWeight.w900,
-                                      fontStyle: FontStyle.italic,
-                                      color: Colors.white,
-                                      height: 0.9,
-                                      letterSpacing: 2,
-                                      shadows: [
-                                        Shadow(
-                                          color: Colors.white.withValues(alpha: 0.2),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.white.withValues(alpha: 0.15),
+                                      blurRadius: 40,
+                                      spreadRadius: 10,
                                     ),
-                                  ),
-                                  Text(
-                                    'RUN',
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 46,
-                                      fontWeight: FontWeight.w900,
-                                      fontStyle: FontStyle.italic,
-                                      color: Colors.white,
-                                      height: 0.9,
-                                      letterSpacing: 2,
-                                      shadows: [
-                                        Shadow(
-                                          color: Colors.white.withValues(alpha: 0.2),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                                child: Image.asset(
+                                  'assets/images/main_menu.png',
+                                  width: MediaQuery.of(context).size.width * 0.9, // Ekran genişliğine göre dinamik boyut
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
                           // Sıralama Widget'ı
                           FadeTransition(
                             opacity: _fadeAnimation,
@@ -398,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 end: Offset.zero,
                               ).animate(_card2Animation),
                               child: _GameButton(
-                                title: 'Oyunlar',
+                                title: AppStrings.games,
                                 glowColor: const Color(0xFFFFE81F), // Neon yellow glow
                                 height: 80,
                                 onTap: _navigateToGames,
@@ -419,7 +467,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ),
                             ),
                           ),
-                          const Spacer(flex: 2),
+                          const Spacer(flex: 5),
                         ],
                       ),
                     ),
@@ -428,6 +476,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               );
             },
           ),
+            ),
+          ],
         ),
       ),
     );
@@ -557,7 +607,7 @@ class _DailyRunGameButtonState extends State<_DailyRunGameButton> with TickerPro
               ),
               const SizedBox(height: 2),
               Text(
-                'Yenilenmeye: $hours:$minutes:$seconds',
+                '${AppStrings.renewalIn}: $hours:$minutes:$seconds',
                 style: GoogleFonts.nunito(
                   color: Colors.white70,
                   fontSize: 13,
@@ -688,7 +738,7 @@ class _DailyRunLeaderboardWidgetState extends State<_DailyRunLeaderboardWidget> 
     super.initState();
     final slot = DailyRunService.currentRunSlot();
     _gameId = 'daily_run_${slot == 1 ? "morning" : "evening"}';
-    _gameName = slot == 1 ? 'Daily Run (Sabah)' : 'Daily Run (Akşam)';
+    _gameName = AppStrings.dailyRunSlotName(slot);
     _loadTop3();
   }
 
@@ -715,7 +765,7 @@ class _DailyRunLeaderboardWidgetState extends State<_DailyRunLeaderboardWidget> 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Sıralamayı görmek için internet bağlantısı gerekiyor.',
+                AppStrings.leaderboardInternetRequired,
                 style: GoogleFonts.nunito(color: Colors.white, fontWeight: FontWeight.bold),
               ),
               backgroundColor: Colors.redAccent,
@@ -760,7 +810,7 @@ class _DailyRunLeaderboardWidgetState extends State<_DailyRunLeaderboardWidget> 
                 const Icon(Icons.emoji_events_rounded, color: Colors.greenAccent, size: 28),
                 const SizedBox(width: 8),
                 Text(
-                  'GÜNÜN SIRALAMASI',
+                  AppStrings.todaysRanking,
                   style: GoogleFonts.nunito(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
@@ -781,7 +831,7 @@ class _DailyRunLeaderboardWidgetState extends State<_DailyRunLeaderboardWidget> 
               const Center(child: CircularProgressIndicator(color: Colors.purpleAccent))
             else if (_entries == null || _entries!.isEmpty)
               Text(
-                'Henüz oynayan yok. İlk sen ol!',
+                AppStrings.noPlayersYet,
                 style: GoogleFonts.nunito(color: Colors.white70),
               )
             else
@@ -829,7 +879,7 @@ class _DailyRunLeaderboardWidgetState extends State<_DailyRunLeaderboardWidget> 
                           Expanded(
                             child: Text(
                               entry.userId == LeaderboardService().userId
-                                  ? 'SEN'
+                                  ? AppStrings.you
                                   : _shortenName(entry.displayName).toUpperCase(),
                               style: GoogleFonts.nunito(
                                 fontSize: rank == 1 ? 16 : 14,
@@ -856,7 +906,7 @@ class _DailyRunLeaderboardWidgetState extends State<_DailyRunLeaderboardWidget> 
               ),
             const SizedBox(height: 12),
             Text(
-              'TÜMÜNÜ GÖR',
+              AppStrings.seeAll,
               style: GoogleFonts.nunito(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -919,8 +969,12 @@ class _StreakButtonState extends State<_StreakButton>
 
   @override
   Widget build(BuildContext context) {
-    const glowColor = Color(0xFFFF007F);
     final streak = StreakService().currentStreak;
+    final isFrozen = StreakService().isFrozenToday;
+    
+    final glowColor = isFrozen ? const Color(0xFF40C4FF) : const Color(0xFFFF007F); // Ice blue if frozen
+    final badgeColor = isFrozen ? const Color(0xFF00B0FF) : const Color(0xFFFF6E40); // Ice blue badge
+    final iconText = isFrozen ? '❄️' : '🔥';
 
     return AnimatedBuilder(
       animation: _pressAnimation,
@@ -960,13 +1014,13 @@ class _StreakButtonState extends State<_StreakButton>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Seri',
+                AppStrings.streak,
                 style: GoogleFonts.nunito(
                   color: Colors.white,
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.2,
-                  shadows: const [Shadow(color: glowColor, blurRadius: 10)],
+                  shadows: [Shadow(color: glowColor, blurRadius: 10)],
                 ),
               ),
               if (streak > 0) ...[
@@ -974,14 +1028,14 @@ class _StreakButtonState extends State<_StreakButton>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF6E40).withValues(alpha: 0.25),
+                    color: badgeColor.withValues(alpha: 0.25),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: const Color(0xFFFF6E40).withValues(alpha: 0.6),
+                      color: badgeColor.withValues(alpha: 0.6),
                     ),
                   ),
                   child: Text(
-                    '$streak 🔥',
+                    '$streak $iconText',
                     style: GoogleFonts.nunito(
                       color: Colors.white,
                       fontSize: 16,

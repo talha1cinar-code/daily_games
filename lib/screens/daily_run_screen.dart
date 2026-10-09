@@ -5,6 +5,8 @@ import 'dart:async';
 import '../services/daily_run_service.dart';
 import '../services/sound_service.dart';
 import '../services/ad_service.dart';
+import '../services/app_strings.dart';
+import '../widgets/logo_background.dart';
 import 'leaderboard_screen.dart';
 import '../games/wordle/wordle_screen.dart';
 import '../games/wikitrivia/wikitrivia_screen.dart';
@@ -163,7 +165,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
   void _showDailyRunLeaderboard() {
     final slot = DailyRunService.currentRunSlot();
     final gameId = 'daily_run_${slot == 1 ? "morning" : "evening"}';
-    final name = slot == 1 ? 'Daily Run (Sabah)' : 'Daily Run (Akşam)';
+    final name = AppStrings.dailyRunSlotName(slot);
     Navigator.push(
       context,
       PageRouteBuilder(
@@ -200,7 +202,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
               ),
               const SizedBox(height: 16),
               Text(
-                'Daily Run Tamamlandı!',
+                AppStrings.dailyRunCompleted,
                 style: GoogleFonts.nunito(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
@@ -209,7 +211,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-              Text('Toplam Puan', style: GoogleFonts.nunito(fontSize: 14, color: Colors.white54)),
+              Text(AppStrings.totalScore, style: GoogleFonts.nunito(fontSize: 14, color: Colors.white54)),
               const SizedBox(height: 4),
               Text(
                 totalScore.toStringAsFixed(1),
@@ -238,7 +240,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
                         ),
                         elevation: 0,
                       ),
-                      child: Text('Sıralama', style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700)),
+                      child: Text(AppStrings.ranking, style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -255,7 +257,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
                       ),
-                      child: Text('Ana Sayfa', style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700)),
+                      child: Text(AppStrings.homePage, style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ],
@@ -275,16 +277,21 @@ class _DailyRunScreenState extends State<DailyRunScreen>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF121212),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF5E35B1), Color(0xFF121212)],
-            stops: [0.0, 0.6],
-          ),
+                  gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF2E0854), // Vibrant deep purple
+            Color(0xFF0F3460), // Deep blue
+            Color(0xFF16213E), // Dark slate blue
+          ],
         ),
-        child: SafeArea(
-          child: Column(
+        ),
+        child: Stack(
+          children: [
+            const LogoBackground(),
+            SafeArea(
+              child: Column(
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
@@ -326,7 +333,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  slot == 1 ? 'Sabah Turu' : 'Akşam Turu',
+                                  slot == 1 ? AppStrings.morningRound : AppStrings.eveningRound,
                                   style: GoogleFonts.nunito(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w900,
@@ -379,7 +386,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Toplam Puan', style: GoogleFonts.nunito(fontSize: 12, color: Colors.white54)),
+                          Text(AppStrings.totalScore, style: GoogleFonts.nunito(fontSize: 12, color: Colors.white54)),
                           Text(
                             DailyRunService().getTotalScore().toStringAsFixed(1),
                             style: GoogleFonts.nunito(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.amberAccent),
@@ -423,7 +430,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
                   onPressed: _showDailyRunLeaderboard,
                   icon: const Icon(Icons.emoji_events_rounded, color: Colors.amberAccent, size: 28),
                   label: Text(
-                    'GENEL SIRALAMA',
+                    AppStrings.generalRanking,
                     style: GoogleFonts.nunito(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -444,8 +451,10 @@ class _DailyRunScreenState extends State<DailyRunScreen>
             ],
           ),
         ),
-      ),
-    );
+      ],
+    ),
+  ),
+);
   }
 
   Widget _buildPathLayout(DailyRunProgress progress) {
@@ -550,7 +559,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
               ),
               child: Center(
                 child: Text(
-                  'BAŞLA',
+                  AppStrings.start,
                   style: GoogleFonts.nunito(
                     fontWeight: FontWeight.w900,
                     fontSize: 20,

@@ -8,6 +8,8 @@ import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
 import 'nerdle_game.dart';
+import '../../services/language_service.dart';
+import '../../services/app_strings.dart';
 
 class NerdleScreen extends StatefulWidget {
   final bool isDailyMode;
@@ -185,7 +187,7 @@ class _NerdleScreenState extends State<NerdleScreen>
           _shakeController.forward();
           _sound.playError();
         case GuessResult.noEquals:
-          _message = '= işareti gerekli!';
+          _message = LanguageService().currentLanguage == 'tr' ? '= işareti gerekli!' : '= sign required!';
           _shakingRow = _game.guesses.length;
           _shakeController.forward();
           _sound.playError();
@@ -200,12 +202,12 @@ class _NerdleScreenState extends State<NerdleScreen>
           _shakeController.forward();
           _sound.playError();
         case GuessResult.correct:
-          _message = 'Tebrikler! 🎉';
+          _message = '${AppStrings.congratulations} 🎉';
           _revealingRow = _game.guesses.length - 1;
           _revealController.forward();
           _sound.playFlip();
         case GuessResult.outOfAttempts:
-          _message = 'Hakkın bitti!';
+          _message = LanguageService().currentLanguage == 'tr' ? 'Hakkın bitti!' : 'Out of attempts!';
           _revealingRow = _game.guesses.length - 1;
           _revealController.forward();
           _sound.playFlip();
@@ -247,7 +249,7 @@ class _NerdleScreenState extends State<NerdleScreen>
               ),
               const SizedBox(height: 16),
               Text(
-                _game.isWon ? 'Dahisin!' : 'Maalesef!',
+                _game.isWon ? (LanguageService().currentLanguage == 'tr' ? 'Dahisin!' : 'Genius!') : AppStrings.sorry,
                 style: GoogleFonts.nunito(
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
@@ -259,7 +261,7 @@ class _NerdleScreenState extends State<NerdleScreen>
               const SizedBox(height: 8),
               if (_game.isWon)
                 Text(
-                  '${_game.guesses.length}/${NerdleGame.maxAttempts} denemede çözdün!',
+                  LanguageService().currentLanguage == 'tr' ? '${_game.guesses.length}/${NerdleGame.maxAttempts} denemede çözdün!' : 'Solved in ${_game.guesses.length}/${NerdleGame.maxAttempts} attempts!',
                   style: GoogleFonts.nunito(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
@@ -270,7 +272,7 @@ class _NerdleScreenState extends State<NerdleScreen>
                 Column(
                   children: [
                     Text(
-                      'Doğru cevap:',
+                      LanguageService().currentLanguage == 'tr' ? 'Doğru cevap:' : 'Correct answer:',
                       style: GoogleFonts.nunito(
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
@@ -305,7 +307,7 @@ class _NerdleScreenState extends State<NerdleScreen>
                         borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
-                  child: Text(widget.onGameComplete != null ? 'Sonraki' : 'Ana Sayfa',
+                  child: Text(widget.onGameComplete != null ? (LanguageService().currentLanguage == 'tr' ? 'Sonraki' : 'Next') : (LanguageService().currentLanguage == 'tr' ? 'Ana Sayfa' : 'Home'),
                       style: GoogleFonts.nunito(
                           fontSize: 16, fontWeight: FontWeight.w600)),
                 ),

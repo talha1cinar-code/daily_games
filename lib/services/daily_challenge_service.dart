@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'daily_run_service.dart';
+import 'language_service.dart';
 
 /// Firestore'dan günlük oyun verilerini çeken ve cache'leyen servis.
 ///
@@ -181,10 +182,12 @@ class DailyChallengeService {
   // ─── Oyun Bazlı Seed Tabanlı İçerik Üretimi ─────────────────────
 
   /// Wordle: Seed tabanlı kelime seçimi.
-  /// [allWords] kelime listesi dışarıdan geçilir (WordleGame._allWords).
+  /// [allWords] kelime listesi dışarıdan geçilir (WordleGame.allWords — dile göre).
+  /// Seed dile göre de farklılaşır, böylece aynı dili oynayan kullanıcılar aynı kelimeyi görür.
   static String getSeededWordleWord(List<String> allWords) {
     if (allWords.isEmpty) return 'KELME';
-    final seed = getDailyRunSeed('wordle');
+    final lang = LanguageService().currentLanguage;
+    final seed = getDailyRunSeed('wordle_$lang');
     final rng = Random(seed);
     return allWords[rng.nextInt(allWords.length)];
   }

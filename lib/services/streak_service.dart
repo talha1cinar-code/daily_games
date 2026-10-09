@@ -54,8 +54,14 @@ class StreakService extends ChangeNotifier {
     return diff <= restoreWindowDays;
   }
 
-  /// Dondurma hakkı doluysa true
   bool get isFreezeAvailable => _freezeCount > 0;
+  
+  /// Bugün henüz oynanmadıysa ve donma hakkı varsa seri donmuş (koruma altında) sayılır.
+  bool get isFrozenToday {
+    if (_currentStreak == 0) return false;
+    final today = _todayKey();
+    return _lastPlayedDate != today && _freezeCount > 0;
+  }
 
   // ─── Init ──────────────────────────────────────────────────────
   Future<void> init() async {

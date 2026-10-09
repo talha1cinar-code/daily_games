@@ -6,6 +6,7 @@ import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 
 import 'services/settings_service.dart';
+import 'services/language_service.dart';
 import 'services/ticket_service.dart';
 import 'services/stats_service.dart';
 import 'services/leaderboard_service.dart';
@@ -36,6 +37,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
+  await LanguageService().init();
   await SettingsService().init();
   await TicketService().init();
   await StatsService().init();

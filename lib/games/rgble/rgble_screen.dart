@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../services/app_strings.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../widgets/game_exit_wrapper.dart';
@@ -9,6 +10,7 @@ import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
 import 'rgble_game.dart';
+import '../../services/language_service.dart';
 
 /// RGBle oyun ekranı — 5 round'luk renk eşleştirme.
 ///
@@ -128,15 +130,15 @@ class _RgbleScreenState extends State<RgbleScreen>
   }
 
   Future<void> _playCountdownAnimation() async {
-    // "Hazır"
-    setState(() => _countdownText = 'Hazır');
+    // "Hazır" / "Ready"
+    setState(() => _countdownText = LanguageService().isTurkish ? 'Hazır' : 'Ready');
     _textScaleController.forward(from: 0.0);
     _sound.playFlip();
     await Future.delayed(const Duration(milliseconds: 1000));
     if (!mounted) return;
 
-    // "Başla!"
-    setState(() => _countdownText = 'Başla!');
+    // "Başla!" / "Go!"
+    setState(() => _countdownText = LanguageService().isTurkish ? 'Başla!' : 'Go!');
     _textScaleController.forward(from: 0.0);
     _sound.playWin();
     await Future.delayed(const Duration(milliseconds: 800));
@@ -347,7 +349,7 @@ class _RgbleScreenState extends State<RgbleScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Rengi gör, rengi bul!',
+                  LanguageService().isTurkish ? 'Rengi gör, rengi bul!' : 'See the color, find the color!',
                   style: GoogleFonts.nunito(
                     fontSize: 16,
                     color: Colors.white.withValues(alpha: 0.4),
@@ -355,7 +357,7 @@ class _RgbleScreenState extends State<RgbleScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '5 round • 10 puan/round • 50 toplam',
+                  LanguageService().currentLanguage == 'tr' ? '5 round • 10 puan/round • 50 toplam' : '5 rounds • 10 points/round • 50 total',
                   style: GoogleFonts.nunito(
                     fontSize: 13,
                     color: Colors.white.withValues(alpha: 0.25),
@@ -383,7 +385,7 @@ class _RgbleScreenState extends State<RgbleScreen>
                     ),
                     child: Center(
                       child: Text(
-                        'Başla',
+                        AppStrings.start,
                         style: GoogleFonts.nunito(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
@@ -423,7 +425,7 @@ class _RgbleScreenState extends State<RgbleScreen>
           style: GoogleFonts.nunito(
             fontSize: 64,
             fontWeight: FontWeight.w700,
-            color: _countdownText == 'Başla!'
+            color: (_countdownText == 'Başla!' || _countdownText == 'Go!')
                 ? const Color(0xFF6BCB77)
                 : Colors.white,
             letterSpacing: 4,
@@ -460,7 +462,7 @@ class _RgbleScreenState extends State<RgbleScreen>
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                'Bu rengi hatırla!',
+                LanguageService().isTurkish ? 'Bu rengi hatırla!' : 'Remember this color!',
                 style: GoogleFonts.nunito(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -560,7 +562,7 @@ class _RgbleScreenState extends State<RgbleScreen>
               ),
               const Spacer(),
               Text(
-                'Rengi bul!',
+                LanguageService().isTurkish ? 'Rengi bul!' : 'Find the color!',
                 style: GoogleFonts.nunito(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -807,7 +809,7 @@ class _RgbleScreenState extends State<RgbleScreen>
             const Icon(Icons.colorize_rounded, color: Colors.white, size: 22),
             const SizedBox(width: 10),
             Text(
-              'Tahmin Et',
+              LanguageService().currentLanguage == 'tr' ? 'Tahmin Et' : 'Guess',
               style: GoogleFonts.nunito(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
@@ -857,12 +859,12 @@ class _RgbleScreenState extends State<RgbleScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildColorBox(targetColor, 'Hedef'),
+                _buildColorBox(targetColor, LanguageService().isTurkish ? 'Hedef' : 'Target'),
                 const SizedBox(width: 16),
                 Icon(Icons.compare_arrows_rounded,
                     color: Colors.white.withValues(alpha: 0.4), size: 28),
                 const SizedBox(width: 16),
-                _buildColorBox(guessColor, 'Senin'),
+                _buildColorBox(guessColor, LanguageService().isTurkish ? 'Senin' : 'Yours'),
               ],
             ),
             const SizedBox(height: 32),
@@ -897,7 +899,7 @@ class _RgbleScreenState extends State<RgbleScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Toplam: ${_game.totalScore.toStringAsFixed(1)}',
+              '${LanguageService().isTurkish ? 'Toplam' : 'Total'}: ${_game.totalScore.toStringAsFixed(1)}',
               style: GoogleFonts.nunito(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -927,7 +929,7 @@ class _RgbleScreenState extends State<RgbleScreen>
                 ),
                 child: Center(
                   child: Text(
-                    _game.isGameOver ? 'Sonuçlar' : 'Sonraki Round',
+                    _game.isGameOver ? (LanguageService().currentLanguage == 'tr' ? 'Sonuçlar' : 'Results') : (LanguageService().currentLanguage == 'tr' ? 'Sonraki Round' : 'Next Round'),
                     style: GoogleFonts.nunito(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -1069,7 +1071,7 @@ class _RgbleScreenState extends State<RgbleScreen>
                 ),
                 child: Center(
                   child: Text(
-                    widget.onGameComplete != null ? 'Sonraki' : 'Ana Sayfa',
+                    widget.onGameComplete != null ? (LanguageService().currentLanguage == 'tr' ? 'Sonraki' : 'Next') : (LanguageService().currentLanguage == 'tr' ? 'Ana Sayfa' : 'Home'),
                     style: GoogleFonts.nunito(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,

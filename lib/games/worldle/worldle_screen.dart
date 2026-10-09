@@ -9,6 +9,8 @@ import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
 import 'country.dart';
 import 'worldle_game.dart';
+import '../../services/language_service.dart';
+import '../../services/app_strings.dart';
 
 class WorldleScreen extends StatefulWidget {
   final bool isDailyMode;
@@ -138,7 +140,7 @@ class _WorldleScreenState extends State<WorldleScreen>
       case WorldleGuessResult.wrong:
         _sound.playFlip();
       case WorldleGuessResult.alreadyGuessed:
-        _showSnackBar('Bu ülkeyi zaten tahmin ettin!');
+        _showSnackBar(LanguageService().currentLanguage == 'tr' ? 'Bu ülkeyi zaten tahmin ettin!' : 'You already guessed this country!');
         _sound.playError();
       case WorldleGuessResult.gameOver:
         break;
@@ -188,7 +190,7 @@ class _WorldleScreenState extends State<WorldleScreen>
               ),
               const SizedBox(height: 16),
               Text(
-                _game.isWon ? 'Tebrikler!' : 'Maalesef!',
+                _game.isWon ? AppStrings.congratulations : AppStrings.sorry,
                 style: GoogleFonts.nunito(
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
@@ -200,7 +202,7 @@ class _WorldleScreenState extends State<WorldleScreen>
               const SizedBox(height: 8),
               if (_game.isWon)
                 Text(
-                  '${_game.guesses.length}/${WorldleGame.maxAttempts} denemede buldun!',
+                  LanguageService().currentLanguage == 'tr' ? '${_game.guesses.length}/${WorldleGame.maxAttempts} denemede buldun!' : 'Found in ${_game.guesses.length}/${WorldleGame.maxAttempts} attempts!',
                   style: GoogleFonts.nunito(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
@@ -211,7 +213,7 @@ class _WorldleScreenState extends State<WorldleScreen>
                 Column(
                   children: [
                     Text(
-                      'Doğru cevap:',
+                      LanguageService().currentLanguage == 'tr' ? 'Doğru cevap:' : 'Correct answer:',
                       style: GoogleFonts.nunito(
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
@@ -245,7 +247,7 @@ class _WorldleScreenState extends State<WorldleScreen>
                         borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
-                  child: Text(widget.onGameComplete != null ? 'Sonraki' : 'Ana Sayfa',
+                  child: Text(widget.onGameComplete != null ? (LanguageService().currentLanguage == 'tr' ? 'Sonraki' : 'Next') : (LanguageService().currentLanguage == 'tr' ? 'Ana Sayfa' : 'Home'),
                       style: GoogleFonts.nunito(
                           fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
@@ -459,7 +461,7 @@ class _WorldleScreenState extends State<WorldleScreen>
             fontWeight: FontWeight.w500,
           ),
           decoration: InputDecoration(
-            hintText: 'Bir ülke adı yaz...',
+            hintText: LanguageService().currentLanguage == 'tr' ? 'Bir ülke adı yaz...' : 'Type a country name...',
             hintStyle: GoogleFonts.nunito(
               color: Colors.white.withValues(alpha: 0.3),
               fontSize: 15,
@@ -608,8 +610,8 @@ class _WorldleScreenState extends State<WorldleScreen>
               Flexible(
                 child: Text(
                   _selectedCountry != null
-                      ? '${_selectedCountry!.flagEmoji} ${_selectedCountry!.name} — Tahmin Et'
-                      : 'Bir ülke seç',
+                      ? '${_selectedCountry!.flagEmoji} ${_selectedCountry!.name} — ${LanguageService().currentLanguage == 'tr' ? 'Tahmin Et' : 'Guess'}'
+                      : (LanguageService().currentLanguage == 'tr' ? 'Bir ülke seç' : 'Select a country'),
                   style: GoogleFonts.nunito(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -638,7 +640,7 @@ class _WorldleScreenState extends State<WorldleScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Tahminlerin burada görünecek',
+              LanguageService().currentLanguage == 'tr' ? 'Tahminlerin burada görünecek' : 'Your guesses will appear here',
               style: GoogleFonts.nunito(
                 fontSize: 14,
                 color: Colors.white.withValues(alpha: 0.2),
@@ -655,7 +657,7 @@ class _WorldleScreenState extends State<WorldleScreen>
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: Text(
-            'Tahminler',
+            LanguageService().currentLanguage == 'tr' ? 'Tahminler' : 'Guesses',
             style: GoogleFonts.nunito(
               fontSize: 16,
               fontWeight: FontWeight.w600,

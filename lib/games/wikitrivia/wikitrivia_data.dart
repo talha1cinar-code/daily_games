@@ -2,7 +2,7 @@ import 'wikitrivia_game.dart';
 
 /// Wikitrivia oyunu için zengin, kronolojik ve tematik tarihi olaylar arşivi.
 /// Bilim, sanat, teknoloji, Türk ve dünya tarihi, uzay, spor ve keşifleri kapsayan devasa havuz.
-const List<HistoricalEvent> defaultHistoricalEvents = [
+const List<HistoricalEvent> defaultHistoricalEventsTr = [
   // ==========================================
   // 1. ANTİK ÇAĞ & MİLATTAN ÖNCE (M.Ö.)
   // ==========================================
@@ -378,4 +378,62 @@ const List<HistoricalEvent> defaultHistoricalEvents = [
   HistoricalEvent(title: 'Ruanda Soykırımı', year: 1994),
   HistoricalEvent(title: 'Dünyanın En Derin Noktası Mariana Çukuru\'na İlk Kez İnsanlı İniş Yapılması (Trieste)', year: 1960),
   HistoricalEvent(title: 'Göktürk-2 Uydusunun Uzaya Fırlatılması', year: 2012),
+];
+
+
+const List<HistoricalEvent> defaultHistoricalEventsEn = [
+  HistoricalEvent(title: 'Invention of the Wheel', year: -3500),
+  HistoricalEvent(title: 'Construction of the Great Pyramid of Giza', year: -2560),
+  HistoricalEvent(title: 'Founding of Rome', year: -753),
+  HistoricalEvent(title: 'Assassination of Julius Caesar', year: -44),
+  HistoricalEvent(title: 'Fall of the Western Roman Empire', year: 476),
+  HistoricalEvent(title: 'Coronation of Charlemagne', year: 800),
+  HistoricalEvent(title: 'Battle of Hastings', year: 1066),
+  HistoricalEvent(title: 'Signing of the Magna Carta', year: 1215),
+  HistoricalEvent(title: 'Gutenberg Invents the Printing Press', year: 1440),
+  HistoricalEvent(title: 'Fall of Constantinople', year: 1453),
+  HistoricalEvent(title: 'Columbus Discovers America', year: 1492),
+  HistoricalEvent(title: 'Martin Luther\'s 95 Theses', year: 1517),
+  HistoricalEvent(title: 'Spanish Armada Defeated', year: 1588),
+  HistoricalEvent(title: 'Jamestown Settlement Founded', year: 1607),
+  HistoricalEvent(title: 'Galileo Faces the Inquisition', year: 1633),
+  HistoricalEvent(title: 'Isaac Newton Publishes Principia', year: 1687),
+  HistoricalEvent(title: 'American Declaration of Independence', year: 1776),
+  HistoricalEvent(title: 'French Revolution Begins', year: 1789),
+  HistoricalEvent(title: 'Battle of Waterloo', year: 1815),
+  HistoricalEvent(title: 'Invention of the Telegraph', year: 1837),
+  HistoricalEvent(title: 'Publication of The Communist Manifesto', year: 1848),
+  HistoricalEvent(title: 'Charles Darwin Publishes On the Origin of Species', year: 1859),
+  HistoricalEvent(title: 'American Civil War Begins', year: 1861),
+  HistoricalEvent(title: 'Assassination of Abraham Lincoln', year: 1865),
+  HistoricalEvent(title: 'Alexander Graham Bell Invents the Telephone', year: 1876),
+  HistoricalEvent(title: 'Thomas Edison Invents the Light Bulb', year: 1879),
+  HistoricalEvent(title: 'Wright Brothers\' First Flight', year: 1903),
+  HistoricalEvent(title: 'Sinking of the Titanic', year: 1912),
+  HistoricalEvent(title: 'Assassination of Archduke Franz Ferdinand', year: 1914),
+  HistoricalEvent(title: 'Russian Revolution', year: 1917),
+  HistoricalEvent(title: 'End of World War I', year: 1918),
+  HistoricalEvent(title: 'Wall Street Crash (Black Tuesday)', year: 1929),
+  HistoricalEvent(title: 'Adolf Hitler Becomes Chancellor of Germany', year: 1933),
+  HistoricalEvent(title: 'Germany Invades Poland (WWII Begins)', year: 1939),
+  HistoricalEvent(title: 'Attack on Pearl Harbor', year: 1941),
+  HistoricalEvent(title: 'D-Day (Normandy Landings)', year: 1944),
+  HistoricalEvent(title: 'Atomic Bombings of Hiroshima and Nagasaki', year: 1945),
+  HistoricalEvent(title: 'Founding of the United Nations', year: 1945),
+  HistoricalEvent(title: 'India Gains Independence', year: 1947),
+  HistoricalEvent(title: 'Creation of the State of Israel', year: 1948),
+  HistoricalEvent(title: 'NATO is Formed', year: 1949),
+  HistoricalEvent(title: 'Korean War Begins', year: 1950),
+  HistoricalEvent(title: 'Discovery of the Structure of DNA', year: 1953),
+  HistoricalEvent(title: 'Sputnik 1 Launched', year: 1957),
+  HistoricalEvent(title: 'Cuban Missile Crisis', year: 1962),
+  HistoricalEvent(title: 'Assassination of John F. Kennedy', year: 1963),
+  HistoricalEvent(title: 'Apollo 11 Moon Landing', year: 1969),
+  HistoricalEvent(title: 'Fall of the Berlin Wall', year: 1989),
+  HistoricalEvent(title: 'Dissolution of the Soviet Union', year: 1991),
+  HistoricalEvent(title: 'Nelson Mandela Becomes President of South Africa', year: 1994),
+  HistoricalEvent(title: 'September 11 Attacks', year: 2001),
+  HistoricalEvent(title: 'Introduction of the iPhone', year: 2007),
+  HistoricalEvent(title: 'Barack Obama Elected US President', year: 2008),
+  HistoricalEvent(title: 'COVID-19 Pandemic Declared', year: 2020),
 ];

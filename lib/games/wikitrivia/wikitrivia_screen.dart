@@ -9,6 +9,7 @@ import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
 import 'wikitrivia_game.dart';
 import 'wikitrivia_data.dart';
+import '../../services/language_service.dart';
 
 class WikitriviaScreen extends StatefulWidget {
   final bool isDailyMode;
@@ -136,8 +137,9 @@ class _WikitriviaScreenState extends State<WikitriviaScreen>
     List<HistoricalEvent>? externalEvents;
     
     if (widget.isDailyMode) {
+      final sourceEvents = LanguageService().currentLanguage == 'tr' ? defaultHistoricalEventsTr : defaultHistoricalEventsEn;
       externalEvents = DailyChallengeService.getSeededWikitriviaEvents(
-        defaultHistoricalEvents,
+        sourceEvents,
         take: 15,
       );
     }
@@ -222,7 +224,7 @@ class _WikitriviaScreenState extends State<WikitriviaScreen>
               ),
               const SizedBox(height: 16),
               Text(
-                _game.isWon ? 'Tebrikler!' : 'Oyun Bitti!',
+                _game.isWon ? (LanguageService().currentLanguage == 'tr' ? 'Tebrikler!' : 'Congratulations!') : (LanguageService().currentLanguage == 'tr' ? 'Oyun Bitti!' : 'Game Over!'),
                 style: GoogleFonts.nunito(
                   fontSize: 26,
                   fontWeight: FontWeight.w700,
@@ -233,7 +235,7 @@ class _WikitriviaScreenState extends State<WikitriviaScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                '${_game.score}/${_game.totalAttempts} doğru yerleştirme',
+                LanguageService().currentLanguage == 'tr' ? '${_game.score}/${_game.totalAttempts} doğru yerleştirme' : '${_game.score}/${_game.totalAttempts} correct placements',
                 style: GoogleFonts.nunito(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
@@ -256,7 +258,7 @@ class _WikitriviaScreenState extends State<WikitriviaScreen>
                         borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
-                  child: Text(widget.onGameComplete != null ? 'Sonraki' : 'Ana Sayfa',
+                  child: Text(widget.onGameComplete != null ? (LanguageService().currentLanguage == 'tr' ? 'Sonraki' : 'Next') : (LanguageService().currentLanguage == 'tr' ? 'Ana Sayfa' : 'Home'),
                       style: GoogleFonts.nunito(
                           fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
@@ -297,7 +299,7 @@ class _WikitriviaScreenState extends State<WikitriviaScreen>
                         color: Colors.white.withValues(alpha: 0.3), size: 18),
                     const SizedBox(width: 6),
                     Text(
-                      'Kartı sürükleyerek zaman çizelgesine bırak',
+                      LanguageService().currentLanguage == 'tr' ? 'Kartı sürükleyerek zaman çizelgesine bırak' : 'Drag the card and drop to timeline',
                       style: GoogleFonts.nunito(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,

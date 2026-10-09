@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../services/language_service.dart';
 
 /// RGBle oyun mantığı — 5 round'luk renk eşleştirme oyunu.
 class RgbleGame {
@@ -94,10 +95,11 @@ class RgbleGame {
 
   /// Toplam puana göre başarı mesajı
   static String getFinalMessage(double total) {
-    if (total >= 47) return 'Renk Ustası! 🎨';
-    if (total >= 40) return 'Harika! 🌟';
-    if (total >= 30) return 'İyi İş! 👏';
-    if (total >= 20) return 'Fena Değil 🙂';
-    return 'Alıştırma Gerek 💪';
+    final isTr = LanguageService().isTurkish;
+    if (total >= 47) return isTr ? 'Renk Ustası! 🎨' : 'Color Master! 🎨';
+    if (total >= 40) return isTr ? 'Harika! 🌟' : 'Awesome! 🌟';
+    if (total >= 30) return isTr ? 'İyi İş! 👏' : 'Good Job! 👏';
+    if (total >= 20) return isTr ? 'Fena Değil 🙂' : 'Not Bad 🙂';
+    return isTr ? 'Alıştırma Gerek 💪' : 'Needs Practice 💪';
   }
 }

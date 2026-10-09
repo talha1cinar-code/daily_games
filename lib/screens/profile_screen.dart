@@ -7,6 +7,8 @@ import '../services/leaderboard_service.dart';
 import '../services/streak_service.dart';
 import '../services/ad_service.dart';
 import '../services/sound_service.dart';
+import '../services/app_strings.dart';
+import '../widgets/logo_background.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,7 +18,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMixin {
-  int _bestDailyRunRank = -1;
 
   // Daily Run
   List<GameStat> _dailyRunHistory = [];
@@ -84,7 +85,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           if (mounted) {
             setState(() {
               _dailyRunRanks[stat.date] = rank ?? -1;
-              _updateBestRank();
             });
           }
         } catch (e) {
@@ -98,29 +98,18 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     }
   }
 
-  void _updateBestRank() {
-    int bestRank = -1;
-    for (final rank in _dailyRunRanks.values) {
-      if (rank != null && rank != -1) {
-        if (bestRank == -1 || rank < bestRank) {
-          bestRank = rank;
-        }
-      }
-    }
-    _bestDailyRunRank = bestRank;
-  }
+
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF050505),
-        gradient: RadialGradient(
+                gradient: RadialGradient(
           center: Alignment.center,
           radius: 1.5,
           colors: [
-            Color(0xFF1A0B2E), // Subtle dark purple center
-            Color(0xFF050505), // Almost black edges
+            Color(0xFF2E0854), // Vibrant deep purple center
+            Color(0xFF0F3460), // Deep blue edges
           ],
         ),
       ),
@@ -134,7 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
-            'Profil ve İstatistikler',
+            AppStrings.profileAndStats,
             style: GoogleFonts.nunito(
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -148,13 +137,17 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           ),
           centerTitle: true,
         ),
-        body: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader()),
-            SliverToBoxAdapter(child: _buildStreakCard()),
-            SliverToBoxAdapter(child: _buildOverallStats()),
-            SliverToBoxAdapter(child: _buildDailyRunHistory()),
+        body: Stack(
+          children: [
+            const LogoBackground(),
+            CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(child: _buildHeader()),
+                SliverToBoxAdapter(child: _buildStreakCard()),
+                SliverToBoxAdapter(child: _buildDailyRunHistory()),
+              ],
+            ),
           ],
         ),
       ),
@@ -200,7 +193,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Hoş Geldin,',
+                  AppStrings.welcome,
                   style: GoogleFonts.nunito(
                     fontSize: 14,
                     color: Colors.white70,
@@ -231,166 +224,172 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  // ─── BÜYÜK SERİ KARTI ──────────────────────────────────────────
   Widget _buildStreakCard() {
     final streak = StreakService().currentStreak;
     final bestStreak = StreakService().bestStreak;
     final freezeCount = StreakService().freezeCount;
     final canRestore = StreakService().canRestoreStreak;
     final lostStreak = StreakService().lostStreak;
+    final isFrozen = StreakService().isFrozenToday;
 
-    // Seri rengini belirle
+    // Seri rengini ve temasını belirle
     Color streakColor;
-    if (streak >= 30) {
+    IconData streakIcon;
+    
+    if (isFrozen) {
+      streakColor = const Color(0xFF40C4FF); // Ice blue
+      streakIcon = Icons.ac_unit_rounded;
+    } else if (streak >= 30) {
       streakColor = const Color(0xFFFF6B00); // Turuncu ateş
+      streakIcon = Icons.local_fire_department_rounded;
     } else if (streak >= 14) {
       streakColor = const Color(0xFFFF3D00); // Kırmızı ateş
+      streakIcon = Icons.local_fire_department_rounded;
     } else if (streak >= 7) {
       streakColor = const Color(0xFFFF9100); // Sarı-turuncu
+      streakIcon = Icons.local_fire_department_rounded;
     } else {
       streakColor = const Color(0xFFFF6E40); // Açık turuncu
+      streakIcon = Icons.local_fire_department_rounded;
     }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            streakColor.withValues(alpha: 0.15),
-            const Color(0xFF1A0B2E).withValues(alpha: 0.8),
-            streakColor.withValues(alpha: 0.08),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(28),
+        color: streakColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(32),
         border: Border.all(
-          color: streakColor.withValues(alpha: 0.6),
-          width: 2.5,
+          color: streakColor.withValues(alpha: 0.3),
+          width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: streakColor.withValues(alpha: 0.3),
-            blurRadius: 24,
-            spreadRadius: 3,
-          ),
-          BoxShadow(
-            color: streakColor.withValues(alpha: 0.1),
-            blurRadius: 48,
-            spreadRadius: 8,
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 30,
+            spreadRadius: -5,
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: Stack(
           children: [
-            // Ateş ikonu + Seri sayısı
-            AnimatedBuilder(
-              animation: _streakPulseAnimation,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: streak > 0 ? _streakPulseAnimation.value : 1.0,
-                  child: child,
-                );
-              },
+            Padding(
+              padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  // Ateş ikonu
+                  // Ateş / Buz İkonu ve Seri Sayısı
                   AnimatedBuilder(
-                    animation: _fireAnimation,
+                    animation: _streakPulseAnimation,
                     builder: (context, child) {
-                      return ShaderMask(
-                        shaderCallback: (bounds) => LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Color.lerp(
-                              const Color(0xFFFFEB3B),
-                              const Color(0xFFFF9800),
-                              _fireAnimation.value,
-                            )!,
-                            Color.lerp(
-                              const Color(0xFFFF5722),
-                              const Color(0xFFE64A19),
-                              _fireAnimation.value,
-                            )!,
-                          ],
-                        ).createShader(bounds),
-                        child: Icon(
-                          Icons.local_fire_department_rounded,
-                          size: 64,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(
-                              color: streakColor.withValues(alpha: 0.8),
-                              blurRadius: 20,
-                            ),
-                          ],
-                        ),
+                      return Transform.scale(
+                        scale: (streak > 0 || isFrozen) ? _streakPulseAnimation.value : 1.0,
+                        child: child,
                       );
                     },
-                  ),
-                  const SizedBox(height: 8),
-                  // Seri sayısı
-                  Text(
-                    '$streak',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 56,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      height: 1,
-                      shadows: [
-                        Shadow(
-                          color: streakColor,
-                          blurRadius: 16,
+                    child: Column(
+                      children: [
+                        // İkon (Ateş veya Buz) Animasyonlu Shader ile
+                        AnimatedBuilder(
+                          animation: _fireAnimation,
+                          builder: (context, child) {
+                            return ShaderMask(
+                              shaderCallback: (bounds) => LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: isFrozen ? [
+                                  Color.lerp(const Color(0xFFE1F5FE), const Color(0xFF81D4FA), _fireAnimation.value)!,
+                                  Color.lerp(const Color(0xFF29B6F6), const Color(0xFF0277BD), _fireAnimation.value)!,
+                                ] : [
+                                  Color.lerp(const Color(0xFFFFEB3B), const Color(0xFFFF9800), _fireAnimation.value)!,
+                                  Color.lerp(const Color(0xFFFF5722), const Color(0xFFE64A19), _fireAnimation.value)!,
+                                ],
+                              ).createShader(bounds),
+                              child: Icon(
+                                streakIcon,
+                                size: 80,
+                                color: Colors.white,
+                                shadows: [
+                                  Shadow(
+                                    color: streakColor.withValues(alpha: 0.5),
+                                    blurRadius: 30,
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                        Shadow(
-                          color: streakColor.withValues(alpha: 0.5),
-                          blurRadius: 32,
+                        const SizedBox(height: 12),
+                        // Seri Sayısı
+                        Text(
+                          '$streak',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 72,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            height: 1,
+                            shadows: [
+                              Shadow(color: streakColor.withValues(alpha: 0.5), blurRadius: 20),
+                              Shadow(color: streakColor.withValues(alpha: 0.3), blurRadius: 40),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          isFrozen ? "Donmuş Seri" : AppStrings.dailyStreak,
+                          style: GoogleFonts.nunito(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: isFrozen ? const Color(0xFF81D4FA) : Colors.white70,
+                            letterSpacing: 1.5,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  Text(
-                    'Günlük Seri',
-                    style: GoogleFonts.nunito(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white70,
+                  const SizedBox(height: 32),
+                  
+                  // Alt Bilgi Kutuları (Donma Hakkı & En İyi Seri)
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.05),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildStreakInfoBox(
+                          icon: Icons.ac_unit_rounded,
+                          label: AppStrings.freezeChance,
+                          value: '$freezeCount',
+                          color: const Color(0xFF40C4FF),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
+                        _buildStreakInfoBox(
+                          icon: Icons.emoji_events_rounded,
+                          label: AppStrings.bestStreak,
+                          value: '$bestStreak',
+                          color: const Color(0xFFFFD740),
+                        ),
+                      ],
                     ),
                   ),
+
+                  // Seri geri getirme butonu
+                  if (canRestore) ...[
+                    const SizedBox(height: 16),
+                    _buildRestoreStreakButton(lostStreak, streakColor),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            // Donma hakkı + En iyi seri
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStreakInfoBox(
-                    icon: Icons.ac_unit_rounded,
-                    label: 'Donma Hakkı',
-                    value: '$freezeCount',
-                    color: const Color(0xFF40C4FF),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildStreakInfoBox(
-                    icon: Icons.emoji_events_rounded,
-                    label: 'En İyi Seri',
-                    value: '$bestStreak',
-                    color: const Color(0xFFFFD740),
-                  ),
-                ),
-              ],
-            ),
-            // Seri geri getirme butonu
-            if (canRestore) ...[
-              const SizedBox(height: 16),
-              _buildRestoreStreakButton(lostStreak, streakColor),
-            ],
           ],
         ),
       ),
@@ -403,42 +402,34 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     required String value,
     required Color color,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 22, shadows: [Shadow(color: color, blurRadius: 6)]),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: GoogleFonts.montserrat(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  shadows: [Shadow(color: color, blurRadius: 8)],
-                ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 28, shadows: [Shadow(color: color.withValues(alpha: 0.5), blurRadius: 10)]),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: GoogleFonts.montserrat(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                shadows: [Shadow(color: color.withValues(alpha: 0.5), blurRadius: 10)],
               ),
-              Text(
-                label,
-                style: GoogleFonts.nunito(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white54,
-                ),
+            ),
+            Text(
+              label,
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Colors.white60,
               ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -479,7 +470,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             ),
             const SizedBox(width: 10),
             Text(
-              'Seriyi Geri Getir ($lostStreak 🔥)',
+              AppStrings.restoreStreak(lostStreak),
               style: GoogleFonts.nunito(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -530,7 +521,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               ),
               const SizedBox(height: 16),
               Text(
-                'Seriyi Geri Getir!',
+                AppStrings.restoreStreakTitle,
                 style: GoogleFonts.nunito(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
@@ -539,7 +530,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               ),
               const SizedBox(height: 12),
               Text(
-                'Bir reklam izleyerek $lostStreak günlük serini geri getirebilirsin!',
+                AppStrings.restoreStreakBody(lostStreak),
                 style: GoogleFonts.nunito(
                   fontSize: 14,
                   color: Colors.white70,
@@ -549,7 +540,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               ),
               const SizedBox(height: 8),
               Text(
-                'Bu hak kısıtlı sürelidir.',
+                AppStrings.limitedTimeOffer,
                 style: GoogleFonts.nunito(
                   fontSize: 12,
                   color: Colors.orangeAccent,
@@ -568,7 +559,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   },
                   icon: const Icon(Icons.play_arrow_rounded, size: 22),
                   label: Text(
-                    'Reklam İzle ve Geri Getir',
+                    AppStrings.watchAdAndRestore,
                     style: GoogleFonts.nunito(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -590,7 +581,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: Text(
-                  'Vazgeç',
+                  AppStrings.cancel,
                   style: GoogleFonts.nunito(
                     fontSize: 14,
                     color: Colors.white38,
@@ -614,7 +605,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Serin geri geldi! 🔥',
+                AppStrings.streakRestored,
                 style: GoogleFonts.nunito(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -637,7 +628,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Daily Run Geçmişi',
+            AppStrings.dailyRunHistory,
             style: GoogleFonts.nunito(
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -661,7 +652,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
               child: Text(
-                'Henüz Daily Run geçmişiniz bulunmuyor.\nİlk Daily Run\'ınızı tamamlayın!',
+                AppStrings.noDailyRunHistory,
                 style: GoogleFonts.nunito(
                   fontSize: 14,
                   color: Colors.white54,
@@ -725,7 +716,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${stat.targetValue ?? "Bilinmiyor"} • Puan: ${stat.score.toStringAsFixed(1)}',
+                  '${stat.targetValue ?? AppStrings.unknown} • Puan: ${stat.score.toStringAsFixed(1)}',
                   style: GoogleFonts.nunito(
                     fontSize: 12,
                     color: Colors.white70,
@@ -742,78 +733,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildOverallStats() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildStatBox(
-              'Tamamlanan',
-              _dailyRunHistory.length.toString(),
-              Icons.check_circle_outline_rounded,
-              const Color(0xFF00FFFF), // Neon Cyan
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildStatBox(
-              'En İyi Sıra',
-              _bestDailyRunRank == -1 ? '-' : '#$_bestDailyRunRank',
-              Icons.emoji_events_rounded,
-              const Color(0xFFFFE81F), // Neon Yellow
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatBox(String label, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 12,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 28, shadows: [Shadow(color: color, blurRadius: 8)]),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: GoogleFonts.nunito(
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              shadows: [Shadow(color: color, blurRadius: 8)],
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.nunito(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: Colors.white70,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildRankWidget(int? rank) {
     if (rank == null) {
@@ -846,7 +765,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             const Icon(Icons.videogame_asset_off_rounded, color: Colors.white38, size: 20),
             const SizedBox(height: 4),
             Text(
-              'Oynanmadı',
+              AppStrings.notPlayed,
               style: GoogleFonts.nunito(
                 fontSize: 10,
                 color: Colors.white38,

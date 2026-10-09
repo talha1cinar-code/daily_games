@@ -9,6 +9,7 @@ import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
 import '../../services/daily_challenge_service.dart';
 import 'glass_painter.dart';
+import '../../services/language_service.dart';
 
 class FilleScreen extends StatefulWidget {
   final bool isDailyMode;
@@ -340,10 +341,10 @@ class _FilleScreenState extends State<FilleScreen> with TickerProviderStateMixin
                 : _score >= 50
                     ? '👍'
                     : '😅';
-    final title = _isOverflow ? 'Taştı!' : 'Tebrikler!';
+    final title = _isOverflow ? (LanguageService().currentLanguage == 'tr' ? 'Taştı!' : 'Overflowed!') : (LanguageService().currentLanguage == 'tr' ? 'Tebrikler!' : 'Congratulations!');
     final scoreText = _isOverflow
-        ? '0 Puan'
-        : '%${_score.toStringAsFixed(1)} Dolu';
+        ? (LanguageService().currentLanguage == 'tr' ? '0 Puan' : '0 Points')
+        : (LanguageService().currentLanguage == 'tr' ? '%${_score.toStringAsFixed(1)} Dolu' : '${_score.toStringAsFixed(1)}% Full');
     final titleColor = isSuccess ? Colors.greenAccent : Colors.redAccent;
 
     return Container(
@@ -426,7 +427,7 @@ class _FilleScreenState extends State<FilleScreen> with TickerProviderStateMixin
           ],
           const SizedBox(height: 12),
           Text(
-            'Bardak Boyutu: ${(_glassHeightRatio * 100).toStringAsFixed(0)}%',
+            LanguageService().isTurkish ? 'Bardak Boyutu: ${(_glassHeightRatio * 100).toStringAsFixed(0)}%' : 'Glass Size: ${(_glassHeightRatio * 100).toStringAsFixed(0)}%',
             style: GoogleFonts.outfit(
               fontSize: 14,
               color: Colors.white38,
@@ -456,7 +457,7 @@ class _FilleScreenState extends State<FilleScreen> with TickerProviderStateMixin
                 elevation: 0,
               ),
               child: Text(
-                widget.onGameComplete != null ? 'Sonraki' : 'Kapat',
+                widget.onGameComplete != null ? (LanguageService().currentLanguage == 'tr' ? 'Sonraki' : 'Next') : (LanguageService().currentLanguage == 'tr' ? 'Kapat' : 'Close'),
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -536,7 +537,7 @@ class _FilleScreenState extends State<FilleScreen> with TickerProviderStateMixin
                 ),
               ),
               Text(
-                'Bardağı doldur, taşırma!',
+                LanguageService().isTurkish ? 'Bardağı doldur, taşırma!' : 'Fill the glass, don\'t overflow!',
                 style: GoogleFonts.outfit(
                   fontSize: 12,
                   color: Colors.white38,
@@ -599,7 +600,7 @@ class _FilleScreenState extends State<FilleScreen> with TickerProviderStateMixin
                 duration: const Duration(milliseconds: 200),
                 child: _isOverflow
                     ? Text(
-                        '💧 TAŞTI!',
+                        LanguageService().isTurkish ? '💧 TAŞTI!' : '💧 OVERFLOWED!',
                         key: const ValueKey('overflow'),
                         style: GoogleFonts.outfit(
                           fontSize: 28,
@@ -697,7 +698,7 @@ class _FilleScreenState extends State<FilleScreen> with TickerProviderStateMixin
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Dolduruluyor... Bırakarak durdur!',
+                            LanguageService().isTurkish ? 'Dolduruluyor... Bırakarak durdur!' : 'Filling... Release to stop!',
                             style: GoogleFonts.outfit(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -718,7 +719,7 @@ class _FilleScreenState extends State<FilleScreen> with TickerProviderStateMixin
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Basılı tutarak doldur',
+                              LanguageService().isTurkish ? 'Basılı tutarak doldur' : 'Hold to fill',
                               style: GoogleFonts.outfit(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
@@ -727,7 +728,7 @@ class _FilleScreenState extends State<FilleScreen> with TickerProviderStateMixin
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Tek hakkın var, taşırma!',
+                              LanguageService().isTurkish ? 'Tek hakkın var, taşırma!' : 'You have one chance, don\'t overflow!',
                               style: GoogleFonts.outfit(
                                 fontSize: 13,
                                 color: Colors.white.withValues(alpha: 0.35),

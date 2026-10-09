@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../services/app_strings.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,6 +10,7 @@ import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
 import '../../services/daily_challenge_service.dart';
+import '../../services/language_service.dart';
 
 class ReactleScreen extends StatefulWidget {
   final bool isDailyMode;
@@ -238,12 +240,12 @@ class _ReactleScreenState extends State<ReactleScreen>
   }
 
   String _getReactionRating(double avgMs) {
-    if (avgMs < 200) return 'İnanılmaz! ⚡';
-    if (avgMs < 250) return 'Harika! 🏎️';
-    if (avgMs < 300) return 'Çok İyi! 🔥';
-    if (avgMs < 400) return 'İyi 👍';
-    if (avgMs < 500) return 'Ortalama 😐';
-    return 'Yavaş 🐌';
+    if (avgMs < 200) return LanguageService().currentLanguage == 'tr' ? 'İnanılmaz! ⚡' : 'Incredible! ⚡';
+    if (avgMs < 250) return LanguageService().currentLanguage == 'tr' ? 'Harika! 🏎️' : 'Awesome! 🏎️';
+    if (avgMs < 300) return LanguageService().currentLanguage == 'tr' ? 'Çok İyi! 🔥' : 'Great! 🔥';
+    if (avgMs < 400) return LanguageService().currentLanguage == 'tr' ? 'İyi 👍' : 'Good 👍';
+    if (avgMs < 500) return LanguageService().currentLanguage == 'tr' ? 'Ortalama 😐' : 'Average 😐';
+    return LanguageService().currentLanguage == 'tr' ? 'Yavaş 🐌' : 'Slow 🐌';
   }
 
   Color _getReactionColor(double avgMs) {
@@ -363,7 +365,7 @@ class _ReactleScreenState extends State<ReactleScreen>
             ),
           ),
           Text(
-            'Ortalama Reaksiyon',
+            LanguageService().currentLanguage == 'tr' ? 'Ortalama Reaksiyon' : 'Average Reaction',
             style: GoogleFonts.outfit(
               fontSize: 14,
               color: Colors.white54,
@@ -374,8 +376,8 @@ class _ReactleScreenState extends State<ReactleScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _resultStat('En İyi', '${best}ms', Colors.greenAccent),
-              _resultStat('Puan', score.toStringAsFixed(0), Colors.amberAccent),
+              _resultStat(LanguageService().isTurkish ? 'En İyi' : 'Best', '${best}ms', Colors.greenAccent),
+              _resultStat(LanguageService().currentLanguage == 'tr' ? 'Puan' : 'Score', score.toStringAsFixed(0), Colors.amberAccent),
               _resultStat('Round', '$_totalRounds', Colors.cyanAccent),
             ],
           ),
@@ -440,7 +442,7 @@ class _ReactleScreenState extends State<ReactleScreen>
                 elevation: 0,
               ),
               child: Text(
-                widget.onGameComplete != null ? 'Sonraki' : 'Kapat',
+                widget.onGameComplete != null ? (LanguageService().currentLanguage == 'tr' ? 'Sonraki' : 'Next') : (LanguageService().currentLanguage == 'tr' ? 'Kapat' : 'Close'),
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -549,7 +551,7 @@ class _ReactleScreenState extends State<ReactleScreen>
                 ),
               ),
               Text(
-                'F1 Reaksiyon Testi',
+                LanguageService().isTurkish ? 'F1 Reaksiyon Testi' : 'F1 Reaction Test',
                 style: GoogleFonts.outfit(
                   fontSize: 12,
                   color: Colors.white38,
@@ -750,7 +752,7 @@ class _ReactleScreenState extends State<ReactleScreen>
       case _GamePhase.lighting:
       case _GamePhase.waiting:
         return Text(
-          'Bekle...',
+          LanguageService().isTurkish ? 'Bekle...' : 'Wait...',
           style: GoogleFonts.outfit(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -768,7 +770,7 @@ class _ReactleScreenState extends State<ReactleScreen>
             );
           },
           child: Text(
-            'ŞİMDİ!',
+            LanguageService().isTurkish ? 'ŞİMDİ!' : 'NOW!',
             style: GoogleFonts.outfit(
               fontSize: 36,
               fontWeight: FontWeight.w900,
@@ -787,7 +789,7 @@ class _ReactleScreenState extends State<ReactleScreen>
         return Column(
           children: [
             Text(
-              'Erken Bastın! ❌',
+              LanguageService().currentLanguage == 'tr' ? 'Erken Bastın! ❌' : 'Too Early! ❌',
               style: GoogleFonts.outfit(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -796,7 +798,7 @@ class _ReactleScreenState extends State<ReactleScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Tekrar deneniyor...',
+              LanguageService().isTurkish ? 'Tekrar deneniyor...' : 'Retrying...',
               style: GoogleFonts.outfit(
                 fontSize: 14,
                 color: Colors.white38,
@@ -854,7 +856,7 @@ class _ReactleScreenState extends State<ReactleScreen>
         child: Column(
           children: [
             Text(
-              '🏎️ F1 Işıkları Sönünce Tıkla!',
+              LanguageService().currentLanguage == 'tr' ? '🏎️ F1 Işıkları Sönünce Tıkla!' : '🏎️ Click when F1 lights go out!',
               style: GoogleFonts.outfit(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -863,7 +865,7 @@ class _ReactleScreenState extends State<ReactleScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              '$_totalRounds round • En hızlı ol',
+              LanguageService().isTurkish ? '$_totalRounds round • En hızlı ol' : '$_totalRounds rounds • Be the fastest',
               style: GoogleFonts.outfit(
                 fontSize: 14,
                 color: Colors.white38,
@@ -894,7 +896,7 @@ class _ReactleScreenState extends State<ReactleScreen>
                   ],
                 ),
                 child: Text(
-                  '🏁 Başla',
+                  '🏁 ${AppStrings.start}',
                   style: GoogleFonts.outfit(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -915,8 +917,8 @@ class _ReactleScreenState extends State<ReactleScreen>
         padding: const EdgeInsets.only(bottom: 48),
         child: Text(
           _phase == _GamePhase.go
-              ? 'Ekrana dokun!'
-              : 'Işıklar sönene kadar DOKUNMA',
+              ? (LanguageService().isTurkish ? 'Ekrana dokun!' : 'Tap the screen!')
+              : (LanguageService().currentLanguage == 'tr' ? 'Işıklar sönene kadar DOKUNMA' : 'DO NOT TOUCH until lights go out'),
           style: GoogleFonts.outfit(
             fontSize: 15,
             color: _phase == _GamePhase.go

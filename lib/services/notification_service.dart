@@ -4,6 +4,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'daily_run_service.dart';
+import 'app_strings.dart';
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -76,16 +77,16 @@ class NotificationService {
   Future<void> scheduleDailyNotifications() async {
     await _scheduleDailyNotification(
       id: _morningRunStartId,
-      title: 'Sabah Daily Run\'ı Başladı!',
-      body: 'Oyunlar yenilendi. Hemen Oyna',
+      title: AppStrings.morningRunStartedTitle,
+      body: AppStrings.runStartedBody,
       hour: 12, // Kullanıcı isteği: Gündüz 12
       minute: 0,
     );
 
     await _scheduleDailyNotification(
       id: _eveningRunStartId,
-      title: 'Akşam Daily Run\'ı Başladı!',
-      body: 'Oyunlar yenilendi. Hemen Oyna',
+      title: AppStrings.eveningRunStartedTitle,
+      body: AppStrings.runStartedBody,
       hour: 17, // Akşam 17:00
       minute: 0,
     );
@@ -95,8 +96,8 @@ class NotificationService {
     bool skipMorningReminderToday = DailyRunService().isRunStartedToday(1);
     await _scheduleDailyNotification(
       id: _morningRunReminderId,
-      title: 'Sabah Daily Run\'ı Bitmek Üzere',
-      body: 'Sabah oyunlarını tamamlamak için son 1 saatin kaldı.',
+      title: AppStrings.morningRunReminderTitle,
+      body: AppStrings.morningRunReminderBody,
       hour: 16, // Bitime 1 saat kala (16:00)
       minute: 0,
       skipToday: skipMorningReminderToday,
@@ -107,8 +108,8 @@ class NotificationService {
     bool skipEveningReminderToday = DailyRunService().isRunStartedToday(2);
     await _scheduleDailyNotification(
       id: _eveningRunReminderId,
-      title: 'Akşam Daily Run\'ı Bitmek Üzere',
-      body: 'Akşam oyunlarını tamamlamak için son 1 saatin kaldı.',
+      title: AppStrings.eveningRunReminderTitle,
+      body: AppStrings.eveningRunReminderBody,
       hour: 23, // Bitime 1 saat kala (23:00)
       minute: 0,
       skipToday: skipEveningReminderToday,
@@ -202,16 +203,16 @@ class NotificationService {
         // Donma kullanıldı bildirimi
         await _scheduleOneTimeNotification(
           id: id,
-          title: 'Serin Kurtarıldı',
-          body: '1 Dondurma hakkın kullanıldı, şuanki Daily Run\'a katıl ve serini kurtar',
+          title: AppStrings.streakSavedTitle,
+          body: AppStrings.streakSavedBody,
           scheduledDate: notificationDate,
         );
       } else {
         // Seri tamamen sıfırlandı bildirimi
         await _scheduleOneTimeNotification(
           id: id,
-          title: 'Serin Sıfırlandı!',
-          body: 'Oyuna gir belki kurtarma hakkı kazanırsın',
+          title: AppStrings.streakLostTitle,
+          body: AppStrings.streakLostBody,
           scheduledDate: notificationDate,
         );
       }

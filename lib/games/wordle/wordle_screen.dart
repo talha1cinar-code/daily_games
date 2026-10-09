@@ -7,6 +7,7 @@ import '../../services/daily_challenge_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/ticket_service.dart';
 import '../../services/leaderboard_service.dart';
+import '../../services/app_strings.dart';
 import '../../widgets/game_exit_wrapper.dart';
 import 'wordle_game.dart';
 import 'widgets/wordle_grid.dart';
@@ -41,7 +42,7 @@ class _WordleScreenState extends State<WordleScreen>
   // Harf bounce
   int? _bouncingCell;
   
-  // SÃ¼re Ã¶lÃ§Ã¼mÃ¼
+  // Süre ölçümü
   DateTime? _startTime;
 
   @override
@@ -132,8 +133,7 @@ class _WordleScreenState extends State<WordleScreen>
     
     String word;
     if (widget.isDailyMode) {
-      // Ã–nce Firebase override, yoksa seed tabanlÄ± deterministik seÃ§im
-
+      // Önce Firebase override, yoksa seed tabanlı deterministik seçim
       word = DailyChallengeService.getSeededWordleWord(WordleGame.allWords);
     } else {
       word = WordleGame.getRandomWord();
@@ -162,7 +162,7 @@ class _WordleScreenState extends State<WordleScreen>
         _bouncingCell = _game.currentGuess.length - 1;
         _message = '';
       });
-      // Bounce'u sÄ±fÄ±rla
+      // Bounce'u sıfırla
       Future.delayed(const Duration(milliseconds: 200), () {
         if (mounted) setState(() => _bouncingCell = null);
       });
@@ -186,22 +186,22 @@ class _WordleScreenState extends State<WordleScreen>
     setState(() {
       switch (result) {
         case GuessResult.notEnoughLetters:
-          _message = 'Yeterli harf yok!';
+          _message = AppStrings.notEnoughLetters;
           _shakingRow = _game.guesses.length;
           _shakeController.forward();
           _sound.playError();
         case GuessResult.invalidWord:
-          _message = 'GeÃ§ersiz kelime!';
+          _message = AppStrings.invalidWord;
           _shakingRow = _game.guesses.length;
           _shakeController.forward();
           _sound.playError();
         case GuessResult.correct:
-          _message = 'Tebrikler! ğŸ‰';
+          _message = '${AppStrings.congratulations} 🎉';
           _revealingRow = _game.guesses.length - 1;
           _revealController.forward();
           _sound.playFlip();
         case GuessResult.outOfAttempts:
-          _message = 'HakkÄ±n bitti!';
+          _message = AppStrings.outOfAttempts;
           _revealingRow = _game.guesses.length - 1;
           _revealController.forward();
           _sound.playFlip();
@@ -243,13 +243,13 @@ class _WordleScreenState extends State<WordleScreen>
                   );
                 },
                 child: Text(
-                  _game.isWon ? 'ğŸ‰' : 'ğŸ˜”',
+                  _game.isWon ? '🎉' : '😔',
                   style: const TextStyle(fontSize: 64),
                 ),
               ),
               const SizedBox(height: 16),
               Text(
-                _game.isWon ? 'Tebrikler!' : 'Maalesef!',
+                _game.isWon ? AppStrings.congratulations : AppStrings.sorry,
                 style: GoogleFonts.nunito(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
@@ -261,8 +261,8 @@ class _WordleScreenState extends State<WordleScreen>
               const SizedBox(height: 8),
               Text(
                 _game.isWon
-                    ? '${_game.guesses.length}/${_game.maxAttempts} denemede bildin!'
-                    : 'DoÄŸru kelime: ${_game.targetWord}',
+                    ? AppStrings.guessedIn(_game.guesses.length, _game.maxAttempts)
+                    : AppStrings.correctWord(_game.targetWord),
                 style: GoogleFonts.nunito(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -288,7 +288,7 @@ class _WordleScreenState extends State<WordleScreen>
                     elevation: 0,
                   ),
                   child: Text(
-                    widget.onGameComplete != null ? 'Sonraki' : 'Ana Sayfa',
+                    widget.onGameComplete != null ? AppStrings.next : AppStrings.homePage,
                     style: GoogleFonts.nunito(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
@@ -318,7 +318,7 @@ class _WordleScreenState extends State<WordleScreen>
                 const CircularProgressIndicator(color: AppColors.primary),
                 const SizedBox(height: 16),
                 Text(
-                  'Kelimeler yÃ¼kleniyor...',
+                  AppStrings.loadingWords,
                   style: GoogleFonts.nunito(
                     color: AppColors.textSecondary,
                     fontSize: 16,
@@ -339,7 +339,7 @@ class _WordleScreenState extends State<WordleScreen>
         body: SafeArea(
           child: Column(
             children: [
-              // Ãœst bar
+              // Üst bar
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Row(
@@ -390,7 +390,7 @@ class _WordleScreenState extends State<WordleScreen>
                 ],
               ),
             ),
-            // Mesaj alanÄ±
+            // Mesaj alanı
             SizedBox(
               height: 44,
               child: Center(
@@ -450,4 +450,3 @@ class _WordleScreenState extends State<WordleScreen>
     );
   }
 }
-

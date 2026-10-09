@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/services.dart';
+import '../../services/language_service.dart';
 
 /// Wordle oyununun tüm mantığını yöneten sınıf
 class WordleGame {
-  static List<String> _allWords = [];
-  static bool _isLoaded = false;
+  static List<String> _allWordsTr = [];
+  static List<String> _allWordsEn = [];
+  static bool _isLoadedTr = false;
+  static bool _isLoadedEn = false;
 
   final String targetWord;
   final List<List<String>> guesses = [];
@@ -23,23 +26,58 @@ class WordleGame {
 
   // Türkçe alfabe karakterleri
   static final RegExp _turkishLetters = RegExp(r'^[A-ZÇĞIİÖŞÜ]+$');
+  // İngilizce alfabe karakterleri
+  static final RegExp _englishLetters = RegExp(r'^[A-Z]+$');
 
-  /// JSON dosyasından Türkçe kelimeleri yükle
+  /// Aktif dildeki kelime listesine erişim
+  static List<String> get allWords =>
+      LanguageService().isTurkish ? _allWordsTr : _allWordsEn;
+
+  /// JSON dosyasından kelimeleri yükle (dile göre)
   static Future<void> loadWords() async {
-    if (_isLoaded) return;
+    final lang = LanguageService().currentLanguage;
+
+    if (lang == 'tr') {
+      await _loadTurkishWords();
+    } else {
+      await _loadEnglishWords();
+    }
+  }
+
+  /// Türkçe kelimeleri yükle
+  static Future<void> _loadTurkishWords() async {
+    if (_isLoadedTr) return;
 
     final String jsonString =
         await rootBundle.loadString('assets/words/turkish_5_letter_words.json');
     final List<dynamic> jsonList = json.decode(jsonString);
 
-    _allWords = jsonList
+    _allWordsTr = jsonList
         .cast<String>()
         .map((w) => _normalizeTurkish(w.trim()))
         .where((w) => w.length == 5 && _turkishLetters.hasMatch(w))
-        .toSet() // Tekrarları kaldır
+        .toSet()
         .toList();
 
-    _isLoaded = true;
+    _isLoadedTr = true;
+  }
+
+  /// İngilizce kelimeleri yükle
+  static Future<void> _loadEnglishWords() async {
+    if (_isLoadedEn) return;
+
+    final String jsonString =
+        await rootBundle.loadString('assets/words/english_5_letter_words.json');
+    final List<dynamic> jsonList = json.decode(jsonString);
+
+    _allWordsEn = jsonList
+        .cast<String>()
+        .map((w) => w.trim().toUpperCase())
+        .where((w) => w.length == 5 && _englishLetters.hasMatch(w))
+        .toSet()
+        .toList();
+
+    _isLoadedEn = true;
   }
 
   /// Türkçe karakterleri doğru büyütecek fonksiyon
@@ -55,6 +93,14 @@ class WordleGame {
         .toUpperCase();
   }
 
+  /// Dile göre doğru büyük harf çevirimi
+  static String toUpperCaseForLanguage(String text) {
+    if (LanguageService().isTurkish) {
+      return toUpperCaseTurkish(text);
+    }
+    return text.toUpperCase();
+  }
+
   /// Türkçe karakter normalizasyonu (â → A, î → İ, vb.)
   static String _normalizeTurkish(String word) {
     return toUpperCaseTurkish(word)
@@ -64,29 +110,28 @@ class WordleGame {
         .replaceAll('Ê', 'E');
   }
 
-  /// Kelime listesine erişim (seed motoru için)
-  static List<String> get allWords => _allWords;
-
-  /// Günün kelimesini seç (şimdilik tarihe göre deterministik)
+  /// Günün kelimesini seç (tarihe göre deterministik)
   static String getWordOfTheDay() {
-    if (_allWords.isEmpty) return 'KELME';
+    final words = allWords;
+    if (words.isEmpty) return LanguageService().isTurkish ? 'KELME' : 'WORDS';
 
     final now = DateTime.now();
     final seed = now.year * 10000 + now.month * 100 + now.day;
     final random = Random(seed);
-    return _allWords[random.nextInt(_allWords.length)];
+    return words[random.nextInt(words.length)];
   }
 
   /// Rastgele bir kelime seç (biletli oynanış için)
   static String getRandomWord() {
-    if (_allWords.isEmpty) return 'KELME';
+    final words = allWords;
+    if (words.isEmpty) return LanguageService().isTurkish ? 'KELME' : 'WORDS';
     final random = Random();
-    return _allWords[random.nextInt(_allWords.length)];
+    return words[random.nextInt(words.length)];
   }
 
   /// Kelime geçerli mi kontrol et
   bool isValidWord(String word) {
-    return _allWords.contains(toUpperCaseTurkish(word));
+    return allWords.contains(toUpperCaseForLanguage(word));
   }
 
   /// Mevcut tahmini harf olarak ekle
@@ -94,7 +139,7 @@ class WordleGame {
     if (isGameOver) return false;
     if (currentGuess.length >= wordLength) return false;
 
-    currentGuess.add(toUpperCaseTurkish(letter));
+    currentGuess.add(toUpperCaseForLanguage(letter));
     return true;
   }
 

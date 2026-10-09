@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/leaderboard_service.dart';
+import '../services/app_strings.dart';
+import '../widgets/logo_background.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   final String gameId;
@@ -117,15 +119,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF121212),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+                gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            Color(0xFF5E35B1), // Deep purple top
-            Color(0xFF121212), // Dark background bottom
+            Color(0xFF2E0854), // Vibrant deep purple
+            Color(0xFF0F3460), // Deep blue
+            Color(0xFF16213E), // Dark slate blue
           ],
-          stops: [0.0, 0.6],
         ),
       ),
       child: Scaffold(
@@ -148,8 +149,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SafeArea(
-        child: Column(
+      body: Stack(
+        children: [
+          const LogoBackground(),
+          SafeArea(
+            child: Column(
           children: [
             const SizedBox(height: 16),
             // Header
@@ -196,9 +200,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                     GoogleFonts.nunito(fontWeight: FontWeight.w800, fontSize: 14),
                 unselectedLabelStyle:
                     GoogleFonts.nunito(fontWeight: FontWeight.w600, fontSize: 14),
-                tabs: const [
-                  Tab(text: 'GÜNLÜK'),
-                  Tab(text: 'HAFTALIK'),
+                tabs: [
+                  Tab(text: AppStrings.daily),
+                  Tab(text: AppStrings.weekly),
                 ],
               ),
             ),
@@ -217,7 +221,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           ],
         ),
       ),
-    ));
+    ],
+  ),
+));
   }
 
   Widget _buildDailyTab() {
@@ -228,7 +234,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     }
 
     if (_dailyEntries == null || _dailyEntries!.isEmpty) {
-      return _buildEmptyState('Henüz bugün kimse oynamamış.\nİlk sen oyna! 🎮');
+      return _buildEmptyState(AppStrings.noPlayersToday);
     }
 
     final isUserInList =
@@ -277,7 +283,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     }
 
     if (_weeklyEntries == null || _weeklyEntries!.isEmpty) {
-      return _buildEmptyState('Bu hafta henüz kimse oynamamış.\nİlk sen oyna! 🎮');
+      return _buildEmptyState(AppStrings.noPlayersWeek);
     }
 
     final isUserInList =
@@ -437,7 +443,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  isCurrentUser ? 'SEN' : displayName.toUpperCase(),
+                  isCurrentUser ? AppStrings.you : displayName.toUpperCase(),
                   style: GoogleFonts.nunito(
                     fontSize: nameFontSize,
                     fontWeight: FontWeight.w800,
@@ -457,7 +463,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                   Text(
                     durationMs != null
                         ? _formatDuration(durationMs)
-                        : '$daysPlayed gün',
+                        : AppStrings.daysPlayed(daysPlayed!),
                     style: GoogleFonts.nunito(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -535,7 +541,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             child: GestureDetector(
               onTap: () {
                 if (!isMorning) {
-                  _switchDailyRunSlot('daily_run_morning', 'Daily Run (Sabah)');
+                  _switchDailyRunSlot('daily_run_morning', AppStrings.dailyRunSlotName(1));
                 }
               },
               child: Container(
@@ -561,7 +567,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                         color: isMorning ? Colors.orangeAccent : Colors.white54,
                         size: 20),
                     const SizedBox(width: 8),
-                    Text('GÜNDÜZ',
+                    Text(AppStrings.daytime,
                         style: GoogleFonts.nunito(
                           color: isMorning ? Colors.orangeAccent : Colors.white54,
                           fontWeight: FontWeight.w800,
@@ -577,7 +583,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             child: GestureDetector(
               onTap: () {
                 if (isMorning) {
-                  _switchDailyRunSlot('daily_run_evening', 'Daily Run (Akşam)');
+                  _switchDailyRunSlot('daily_run_evening', AppStrings.dailyRunSlotName(2));
                 }
               },
               child: Container(
@@ -603,7 +609,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                         color: !isMorning ? Colors.indigoAccent : Colors.white54,
                         size: 20),
                     const SizedBox(width: 8),
-                    Text('GECE',
+                    Text(AppStrings.night,
                         style: GoogleFonts.nunito(
                           color: !isMorning ? Colors.indigoAccent : Colors.white54,
                           fontWeight: FontWeight.w800,

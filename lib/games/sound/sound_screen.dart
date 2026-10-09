@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../services/app_strings.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../widgets/game_exit_wrapper.dart';
@@ -10,6 +11,7 @@ import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
 import 'sound_game.dart';
+import '../../services/language_service.dart';
 
 enum _GamePhase {
   idle,
@@ -110,15 +112,13 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
   }
 
   Future<void> _playCountdownAnimation() async {
-    // "Hazır"
-    setState(() => _countdownText = 'Hazır');
+    setState(() => _countdownText = LanguageService().isTurkish ? 'Hazır' : 'Ready');
     _textScaleController.forward(from: 0.0);
     _appSound.playFlip();
     await Future.delayed(const Duration(milliseconds: 1000));
     if (!mounted) return;
 
-    // "Başla!"
-    setState(() => _countdownText = 'Başla!');
+    setState(() => _countdownText = LanguageService().isTurkish ? 'Başla!' : 'Go!');
     _textScaleController.forward(from: 0.0);
     _appSound.playWin();
     await Future.delayed(const Duration(milliseconds: 800));
@@ -306,7 +306,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
               ),
               const SizedBox(height: 16),
               Text(
-                'Dinle, kaydır ve frekansı bul!',
+                LanguageService().currentLanguage == 'tr' ? 'Dinle, kaydır ve frekansı bul!' : 'Listen, slide and find the frequency!',
                 style: GoogleFonts.nunito(
                   color: Colors.white70,
                   fontSize: 18,
@@ -326,7 +326,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
                   elevation: 8,
                 ),
                 child: Text(
-                  'BAŞLA',
+                  AppStrings.start,
                   style: GoogleFonts.nunito(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
@@ -386,7 +386,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
                 const Text('🎵', style: TextStyle(fontSize: 64)),
                 const SizedBox(height: 16),
                 Text(
-                  'Oyun Bitti!',
+                  LanguageService().currentLanguage == 'tr' ? 'Oyun Bitti!' : 'Game Over!',
                   style: GoogleFonts.nunito(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -423,7 +423,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: Text(widget.onGameComplete != null ? 'Sonraki' : 'Ana Menü',
+                    child: Text(widget.onGameComplete != null ? (LanguageService().isTurkish ? 'Sonraki' : 'Next') : (LanguageService().isTurkish ? 'Ana Menü' : 'Main Menu'),
                         style: GoogleFonts.nunito(
                             fontSize: 18,
                             fontWeight: FontWeight.w800)),
@@ -502,7 +502,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
                     const Icon(Icons.volume_up, color: Colors.white, size: 64),
                     const SizedBox(height: 16),
                     Text(
-                      'Hedef Sesi Dinle...',
+                      LanguageService().currentLanguage == 'tr' ? 'Hedef Sesi Dinle...' : 'Listen to Target Sound...',
                       style: GoogleFonts.nunito(
                         color: Colors.white,
                         fontSize: 24,
@@ -516,7 +516,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
             if (_phase == _GamePhase.guess && _currentHandle == null)
               Center(
                 child: Text(
-                  'Sesi bulmak için ekranda\nyukarı/aşağı kaydır ve\nbasılı tutarak dinle',
+                  LanguageService().currentLanguage == 'tr' ? 'Sesi bulmak için ekranda\nyukarı/aşağı kaydır ve\nbasılı tutarak dinle' : 'Slide up/down on the screen\nand hold to listen\nto find the sound',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.nunito(
                     color: Colors.white.withValues(alpha: 0.5),
@@ -558,7 +558,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
                         children: [
                           Column(
                             children: [
-                              Text('Hedef', style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16)),
+                              Text(LanguageService().currentLanguage == 'tr' ? 'Hedef' : 'Target', style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16)),
                               Text('${_game.targetFrequencies[_game.currentRound - 1].toStringAsFixed(1)} Hz', 
                                 style: GoogleFonts.nunito(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                             ],
@@ -568,7 +568,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
                           const SizedBox(width: 24),
                           Column(
                             children: [
-                              Text('Tahminin', style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16)),
+                              Text(LanguageService().currentLanguage == 'tr' ? 'Tahminin' : 'Your Guess', style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16)),
                               Text('${_game.guessedFrequencies[_game.currentRound - 1].toStringAsFixed(1)} Hz', 
                                 style: GoogleFonts.nunito(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                             ],

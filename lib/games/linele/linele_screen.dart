@@ -7,6 +7,8 @@ import '../../services/stats_service.dart';
 import '../../services/ticket_service.dart';
 import '../../services/leaderboard_service.dart';
 import 'linele_game.dart';
+import '../../services/language_service.dart';
+import '../../services/app_strings.dart';
 
 class LineleScreen extends StatefulWidget {
   final bool isDailyMode;
@@ -161,7 +163,7 @@ class _LineleScreenState extends State<LineleScreen>
         backgroundColor: const Color(0xFF1B1B2F),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
-          'Tebrikler! 🎉',
+          '${AppStrings.congratulations} 🎉',
           style: GoogleFonts.nunito(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -169,7 +171,7 @@ class _LineleScreenState extends State<LineleScreen>
           ),
         ),
         content: Text(
-          'Labirentten başarıyla çıktın!\nSüre: $mm:$ss',
+          LanguageService().isTurkish ? 'Labirentten başarıyla çıktın!\nSüre: $mm:$ss' : 'You escaped the maze!\nTime: $mm:$ss',
           style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16),
         ),
         actions: [
@@ -179,7 +181,7 @@ class _LineleScreenState extends State<LineleScreen>
               Navigator.pop(context);
             },
             child: Text(
-              'Devam Et',
+              LanguageService().isTurkish ? 'Devam Et' : 'Continue',
               style: GoogleFonts.nunito(
                 color: Colors.blueAccent,
                 fontWeight: FontWeight.bold,
@@ -200,7 +202,7 @@ class _LineleScreenState extends State<LineleScreen>
         backgroundColor: const Color(0xFF1B1B2F),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
-          'Oyun Bitti',
+          LanguageService().currentLanguage == 'tr' ? 'Oyun Bitti' : 'Game Over',
           style: GoogleFonts.nunito(
             color: Colors.redAccent,
             fontWeight: FontWeight.bold,
@@ -208,7 +210,7 @@ class _LineleScreenState extends State<LineleScreen>
           ),
         ),
         content: Text(
-          'Çıkmaz yola girdin! Geri dönüş yok.',
+          LanguageService().isTurkish ? 'Çıkmaz yola girdin! Geri dönüş yok.' : 'You hit a dead end! No way back.',
           style: GoogleFonts.nunito(color: Colors.white70, fontSize: 16),
         ),
         actions: [
@@ -218,7 +220,7 @@ class _LineleScreenState extends State<LineleScreen>
               Navigator.pop(context);
             },
             child: Text(
-              'Çık',
+              LanguageService().isTurkish ? 'Çık' : 'Exit',
               style: GoogleFonts.nunito(
                 color: Colors.redAccent,
                 fontWeight: FontWeight.bold,
@@ -263,7 +265,7 @@ class _LineleScreenState extends State<LineleScreen>
           elevation: 0,
           centerTitle: true,
           title: Text(
-            widget.isDailyMode ? 'Linele (Günlük)' : 'Linele',
+            widget.isDailyMode ? (LanguageService().isTurkish ? 'Linele (Günlük)' : 'Linele (Daily)') : 'Linele',
             style: GoogleFonts.nunito(fontWeight: FontWeight.w800, fontSize: 24),
           ),
           leading: IconButton(
@@ -277,7 +279,7 @@ class _LineleScreenState extends State<LineleScreen>
             if (!widget.isDailyMode)
               IconButton(
                 icon: const Icon(Icons.refresh_rounded),
-                tooltip: 'Sıfırla',
+                tooltip: LanguageService().isTurkish ? 'Sıfırla' : 'Reset',
                 onPressed: _resetGame,
               ),
         ],
@@ -341,7 +343,7 @@ class _LineleScreenState extends State<LineleScreen>
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Text(
-                      'S yeşil başlangıç noktasıdır.\nKırmızı noktalardan birine ulaş, çıkmaz yola girme!',
+                      LanguageService().currentLanguage == 'tr' ? 'S yeşil başlangıç noktasıdır.\nKırmızı noktalardan birine ulaş, çıkmaz yola girme!' : 'S is the green start point.\nReach one of the red points, avoid dead ends!',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.nunito(
                         color: Colors.white38,

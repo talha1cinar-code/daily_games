@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/game_model.dart';
 import '../services/ticket_service.dart';
 import '../services/ad_service.dart';
+import '../services/app_strings.dart';
 
 class GameDetailsBottomSheet extends StatefulWidget {
   final GameModel game;
@@ -111,9 +112,9 @@ class _GameDetailsBottomSheetState extends State<GameDetailsBottomSheet> {
               // OYNA BUTONU
               if (ticketState.tickets > 0)
                 _buildPlayButton(
-                  title: '🎟️ Oyna',
-                  subtitle: '${ticketState.tickets} / ${TicketService.maxTickets} Bilet Kaldı',
-                  timerText: ticketState.tickets < TicketService.maxTickets && timerStr != null ? 'Sonraki bilet: $timerStr' : null,
+                  title: AppStrings.play,
+                  subtitle: AppStrings.ticketsRemaining(ticketState.tickets, TicketService.maxTickets),
+                  timerText: ticketState.tickets < TicketService.maxTickets && timerStr != null ? AppStrings.nextTicket(timerStr) : null,
                   icon: Icons.confirmation_num_rounded,
                   gradientColors: [const Color(0xFFFFAB40), const Color(0xFFFF6D00)], // Turuncu
                   shadowColor: const Color(0xFFFFAB40),
@@ -127,8 +128,8 @@ class _GameDetailsBottomSheetState extends State<GameDetailsBottomSheet> {
                 )
               else ...[
                 _buildPlayButton(
-                  title: '⏳ Biletin Bitti',
-                  subtitle: timerStr != null ? 'Yenilenme: $timerStr' : 'Bekleniyor...',
+                  title: AppStrings.ticketsUsedUp,
+                  subtitle: timerStr != null ? AppStrings.renewalTimer(timerStr) : AppStrings.waiting,
                   timerText: null,
                   icon: Icons.timer_outlined,
                   gradientColors: [Colors.grey.shade700, Colors.grey.shade900],
@@ -138,8 +139,8 @@ class _GameDetailsBottomSheetState extends State<GameDetailsBottomSheet> {
                 const SizedBox(height: 12),
                 if (adTimerStr != null)
                   _buildPlayButton(
-                    title: '⏳ Reklam Bekleniyor',
-                    subtitle: 'Yeniden izlemek için: $adTimerStr',
+                    title: AppStrings.adWaiting,
+                    subtitle: AppStrings.adTimer(adTimerStr),
                     timerText: null,
                     icon: Icons.timer_outlined,
                     gradientColors: [Colors.grey.shade700, Colors.grey.shade900],
@@ -148,8 +149,8 @@ class _GameDetailsBottomSheetState extends State<GameDetailsBottomSheet> {
                   )
                 else
                   _buildPlayButton(
-                    title: '🎬 Biletini Doldur',
-                    subtitle: 'Reklam izle, biletlerini yenile',
+                    title: AppStrings.refillTickets,
+                    subtitle: AppStrings.watchAdRefill,
                     timerText: null,
                     icon: Icons.live_tv_rounded,
                     gradientColors: [Colors.blue.shade400, Colors.blue.shade700],

@@ -1,4 +1,5 @@
 import 'dart:math';
+import '../../services/language_service.dart';
 
 /// Sound oyununun çekirdek mantığı
 class SoundGame {
@@ -73,10 +74,11 @@ class SoundGame {
   }
 
   static String getFinalMessage(double total) {
-    if (total >= 47) return 'Kusursuz Kulak! 🎶';
-    if (total >= 40) return 'Müzisyen Misin? 🎵';
-    if (total >= 30) return 'İyi Duyuyorsun 👂';
-    if (total >= 20) return 'Fena Değil 🙂';
-    return 'Biraz Pratik Şart 😅';
+    final isTr = LanguageService().isTurkish;
+    if (total >= 47) return isTr ? 'Kusursuz Kulak! 🎶' : 'Perfect Ear! 🎶';
+    if (total >= 40) return isTr ? 'Müzisyen Misin? 🎵' : 'Are You a Musician? 🎵';
+    if (total >= 30) return isTr ? 'İyi Duyuyorsun 👂' : 'Good Hearing! 👂';
+    if (total >= 20) return isTr ? 'Fena Değil 🙂' : 'Not Bad 🙂';
+    return isTr ? 'Biraz Pratik Şart 😅' : 'Needs Practice 😅';
   }
 }

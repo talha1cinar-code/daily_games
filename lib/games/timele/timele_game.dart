@@ -1,4 +1,5 @@
 import 'dart:math';
+import '../../services/language_service.dart';
 
 class TimeleGame {
   static const int totalRounds = 5;
@@ -77,10 +78,11 @@ class TimeleGame {
   }
 
   static String getFinalMessage(double total) {
-    if (total >= 47) return 'Zaman Makinesi! ⏱️';
-    if (total >= 40) return 'İç Saat Çok İyi! ⏰';
-    if (total >= 30) return 'İyi İş Çıkardın ⌛';
-    if (total >= 20) return 'Fena Değil 🙂';
-    return 'Zaman Algın Zayıf 😅';
+    final isTr = LanguageService().isTurkish;
+    if (total >= 47) return isTr ? 'Zaman Makinesi! ⏱️' : 'Time Machine! ⏱️';
+    if (total >= 40) return isTr ? 'İç Saat Çok İyi! ⏰' : 'Great Inner Clock! ⏰';
+    if (total >= 30) return isTr ? 'İyi İş Çıkardın ⌛' : 'Good Job! ⌛';
+    if (total >= 20) return isTr ? 'Fena Değil 🙂' : 'Not Bad 🙂';
+    return isTr ? 'Zaman Algın Zayıf 😅' : 'Weak Time Sense 😅';
   }
 }
