@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'analytics_service.dart';
 
 class AdService {
   static final AdService _instance = AdService._internal();
@@ -150,6 +151,7 @@ class AdService {
     _rewardedAd!.show(
       onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
         debugPrint('$ad with reward $RewardItem(${reward.amount}, ${reward.type})');
+        AnalyticsService().logAdWatched('rewarded', reward.type);
         onUserEarnedReward();
       },
     );

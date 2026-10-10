@@ -15,6 +15,9 @@ class AppStrings {
   static String get languageValue => _lang == 'tr' ? 'Türkçe' : 'English';
   static String get homePage => _lang == 'tr' ? 'Ana Sayfa' : 'Home';
   static String get next => _lang == 'tr' ? 'Sonraki' : 'Next';
+  static String get moreSettings => _lang == 'tr' ? 'Daha Fazla' : 'More Settings';
+  static String get privacyPolicy => _lang == 'tr' ? 'Gizlilik Politikası' : 'Privacy Policy';
+  static String get termsOfService => _lang == 'tr' ? 'Kullanım Koşulları' : 'Terms of Service';
 
   // ─── Ana Ekran ─────────────────────────────────────────────────
   static String get games => _lang == 'tr' ? 'Oyunlar' : 'Games';

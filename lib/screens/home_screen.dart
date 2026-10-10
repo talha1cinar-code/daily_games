@@ -151,38 +151,51 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           setState(() {});
                         },
                       ),
-                      const SizedBox(height: 16),
-                      _buildSettingRow(
-                        icon: Icons.music_note_rounded,
-                        title: AppStrings.music,
-                        value: SettingsService().isMusicEnabled,
-                        onChanged: (val) {
-                          SettingsService().toggleMusic();
-                          SoundService().updateBgmState();
-                          setDialogState(() {});
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSettingRow(
-                        icon: Icons.volume_up_rounded,
-                        title: AppStrings.soundEffects,
-                        value: SettingsService().isSfxEnabled,
-                        onChanged: (val) {
-                          SettingsService().toggleSfx();
-                          setDialogState(() {});
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSettingRow(
-                        icon: Icons.vibration_rounded,
-                        title: AppStrings.vibration,
-                        value: SettingsService().isVibrationEnabled,
-                        onChanged: (val) {
-                          SettingsService().toggleVibration();
-                          setDialogState(() {});
-                        },
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildIconToggle(
+                            icon: Icons.music_note_rounded,
+                            iconOff: Icons.music_off_rounded,
+                            value: SettingsService().isMusicEnabled,
+                            onTap: () {
+                              SettingsService().toggleMusic();
+                              SoundService().updateBgmState();
+                              setDialogState(() {});
+                            },
+                          ),
+                          _buildIconToggle(
+                            icon: Icons.volume_up_rounded,
+                            iconOff: Icons.volume_off_rounded,
+                            value: SettingsService().isSfxEnabled,
+                            onTap: () {
+                              SettingsService().toggleSfx();
+                              setDialogState(() {});
+                            },
+                          ),
+                          _buildIconToggle(
+                            icon: Icons.vibration_rounded,
+                            iconOff: Icons.smartphone_rounded,
+                            value: SettingsService().isVibrationEnabled,
+                            onTap: () {
+                              SettingsService().toggleVibration();
+                              setDialogState(() {});
+                            },
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 32),
+                      _GameButton(
+                        title: AppStrings.moreSettings,
+                        glowColor: AppColors.secondary,
+                        height: 56,
+                        onTap: () {
+                          Navigator.of(context).pop(); // Close main settings
+                          _showMoreSettingsDialog(); // Open more settings
+                        },
+                      ),
+                      const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(),
                         style: ElevatedButton.styleFrom(
@@ -212,41 +225,133 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildSettingRow({
-    required IconData icon,
-    required String title,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 24),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              title,
-              style: GoogleFonts.nunito(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
+  void _showMoreSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF16213E), Color(0xFF0F3460)],
               ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 2),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  AppStrings.moreSettings,
+                  style: GoogleFonts.nunito(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _buildMoreSettingRow(
+                  icon: Icons.privacy_tip_rounded,
+                  title: AppStrings.privacyPolicy,
+                  onTap: () {},
+                ),
+                const SizedBox(height: 8),
+                _buildMoreSettingRow(
+                  icon: Icons.description_rounded,
+                  title: AppStrings.termsOfService,
+                  onTap: () {},
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: Text(
+                    AppStrings.close,
+                    style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
             ),
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: AppColors.secondary,
-            activeTrackColor: AppColors.secondary.withValues(alpha: 0.3),
-            inactiveThumbColor: Colors.white.withValues(alpha: 0.5),
-            inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
+        );
+      },
+    );
+  }
+
+  Widget _buildIconToggle({
+    required IconData icon,
+    IconData? iconOff,
+    required bool value,
+    required VoidCallback onTap,
+  }) {
+    final glowColor = value ? AppColors.secondary : Colors.grey;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: glowColor.withValues(alpha: 0.08),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: glowColor.withValues(alpha: value ? 0.6 : 0.0),
+              blurRadius: 16,
+              spreadRadius: 1,
+            ),
+          ],
+          border: Border.all(
+            color: glowColor,
+            width: value ? 2.5 : 1.5,
           ),
-        ],
+        ),
+        child: Icon(
+          value ? icon : (iconOff ?? icon),
+          color: value ? Colors.white : Colors.white.withValues(alpha: 0.5),
+          size: 32,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMoreSettingRow({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.nunito(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.5), size: 24),
+          ],
+        ),
       ),
     );
   }
@@ -265,12 +370,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Icon(Icons.language_rounded, color: Colors.white.withValues(alpha: 0.8), size: 24),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(
-                AppStrings.language,
-                style: GoogleFonts.nunito(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
+              child: FittedBox(
+                alignment: Alignment.centerLeft,
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  AppStrings.language,
+                  style: GoogleFonts.nunito(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),

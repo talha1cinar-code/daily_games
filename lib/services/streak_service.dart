@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'daily_run_service.dart';
 import 'notification_service.dart';
+import 'analytics_service.dart';
 
 /// Duolingo benzeri seri (streak) sistemi.
 ///
@@ -202,6 +203,8 @@ class StreakService extends ChangeNotifier {
     if (_currentStreak > _bestStreak) {
       _bestStreak = _currentStreak;
     }
+
+    AnalyticsService().logStreakAchieved(_currentStreak);
 
     await _save();
   }

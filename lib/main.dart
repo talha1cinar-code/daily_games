@@ -15,6 +15,7 @@ import 'services/daily_run_service.dart';
 import 'services/notification_service.dart';
 import 'services/streak_service.dart';
 import 'services/ad_service.dart';
+import 'services/analytics_service.dart';
 import 'utils/network_utils.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -47,6 +48,7 @@ void main() async {
   await StreakService().init();
   
   await NotificationService().init();
+  await AnalyticsService().init();
   
   await MobileAds.instance.initialize();
   AdService().init();
@@ -106,6 +108,9 @@ class _DailyGamesAppState extends State<DailyGamesApp> with WidgetsBindingObserv
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const HomeScreen(),
+      navigatorObservers: [
+        if (AnalyticsService().observer != null) AnalyticsService().observer!,
+      ],
     );
   }
 }

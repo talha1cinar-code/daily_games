@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'analytics_service.dart';
 
 /// Uygulama dil yönetimi servisi.
 /// Desteklenen diller: 'tr' (Türkçe) ve 'en' (English).
@@ -25,6 +26,7 @@ class LanguageService extends ChangeNotifier {
     _currentLanguage = lang;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('app_language', lang);
+    AnalyticsService().logLanguageChanged(lang);
     notifyListeners();
   }
 

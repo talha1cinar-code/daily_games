@@ -5,6 +5,7 @@ import 'leaderboard_service.dart';
 import 'stats_service.dart';
 import 'notification_service.dart';
 import 'streak_service.dart';
+import 'analytics_service.dart';
 import '../utils/network_utils.dart';
 
 /// Daily Run oturumunu ve ilerlemesini yöneten servis.
@@ -247,6 +248,8 @@ class DailyRunService extends ChangeNotifier {
       isWin: true,
       dateKeyOverride: progress.dateKey,
     );
+
+    AnalyticsService().logDailyRunCompleted(totalScore.toInt());
 
     // Daily Run sonucunu StatsService ile yerel geçmişe kaydet
     await StatsService().saveDailyStat(

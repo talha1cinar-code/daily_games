@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'analytics_service.dart';
 class TicketState {
   final int tickets;
   final DateTime? lastRecharge;
@@ -97,6 +98,7 @@ class TicketService extends ChangeNotifier {
           lastAdWatchTime: state.lastAdWatchTime,
         );
         _saveState(gameId, state);
+        AnalyticsService().logTicketEarned(earnedTickets, 'time_recharge');
       }
     }
 
@@ -155,6 +157,7 @@ class TicketService extends ChangeNotifier {
     );
 
     _saveState(gameId, newState);
+    AnalyticsService().logTicketSpent(1, gameId);
     return true;
   }
 
@@ -180,6 +183,7 @@ class TicketService extends ChangeNotifier {
       lastAdWatchTime: DateTime.now(),
     );
     _saveState(gameId, newState);
+    AnalyticsService().logTicketEarned(maxTickets - state.tickets, 'ad_reward');
   }
 
   /// Bugün günlük oyun oynanmış mı?
