@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:in_app_review/in_app_review.dart';
 import 'daily_run_service.dart';
 import 'notification_service.dart';
 import 'analytics_service.dart';
@@ -21,10 +22,10 @@ class StreakService extends ChangeNotifier {
   static const String _key = 'streak_data_v2';
 
   // Varsayılan donma hakkı
-  static const int defaultFreezeCount = 2;
+  static const int defaultFreezeCount = 5;
 
   // Seri geri getirme penceresi (gün)
-  static const int restoreWindowDays = 7;
+  static const int restoreWindowDays = 2;
 
   // ─── Durum değişkenleri ────────────────────────────────────────
   int _currentStreak = 0;
@@ -81,6 +82,7 @@ class StreakService extends ChangeNotifier {
       _currentStreak = data['currentStreak'] as int? ?? 0;
       _bestStreak = data['bestStreak'] as int? ?? 0;
       _freezeCount = data['freezeCount'] as int? ?? defaultFreezeCount;
+      if (_freezeCount > 5) _freezeCount = 5;
       _lastPlayedDate = data['lastPlayedDate'] as String? ?? '';
       _lostStreak = data['lostStreak'] as int? ?? 0;
       _lostDate = data['lostDate'] as String? ?? '';
@@ -186,6 +188,11 @@ class StreakService extends ChangeNotifier {
       if (diff == 1) {
         // Ardışık gün, seri devam ediyor
         _currentStreak++;
+        if (_currentStreak % 5 == 0) {
+          if (_freezeCount < 5) {
+            _freezeCount++;
+          }
+        }
       } else if (diff == 0) {
         // Aynı gün (zaten yukarıda yakalandı ama safety check)
         return;
@@ -205,6 +212,13 @@ class StreakService extends ChangeNotifier {
     }
 
     AnalyticsService().logStreakAchieved(_currentStreak);
+
+    if (_currentStreak == 7) {
+      final InAppReview inAppReview = InAppReview.instance;
+      if (await inAppReview.isAvailable()) {
+        inAppReview.requestReview();
+      }
+    }
 
     await _save();
   }

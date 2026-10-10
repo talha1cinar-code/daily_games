@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shimmer/shimmer.dart';
 
 import '../services/stats_service.dart';
 import '../services/leaderboard_service.dart';
@@ -17,39 +16,17 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen> {
 
   // Daily Run
   List<GameStat> _dailyRunHistory = [];
   final Map<String, int?> _dailyRunRanks = {};
-
-  // Animasyonlar
-  late AnimationController _streakPulseController;
-  late Animation<double> _streakPulseAnimation;
-  late AnimationController _fireController;
-  late Animation<double> _fireAnimation;
 
   @override
   void initState() {
     super.initState();
     _loadStats();
     _loadDailyRanks();
-
-    _streakPulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    )..repeat(reverse: true);
-    _streakPulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(parent: _streakPulseController, curve: Curves.easeInOut),
-    );
-
-    _fireController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    )..repeat(reverse: true);
-    _fireAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fireController, curve: Curves.easeInOut),
-    );
 
     // StreakService değişikliklerini dinle
     StreakService().addListener(_onStreakChanged);
@@ -61,8 +38,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   @override
   void dispose() {
-    _streakPulseController.dispose();
-    _fireController.dispose();
     StreakService().removeListener(_onStreakChanged);
     super.dispose();
   }
@@ -145,7 +120,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               slivers: [
                 SliverToBoxAdapter(child: _buildHeader()),
                 SliverToBoxAdapter(child: _buildStreakCard()),
-                SliverToBoxAdapter(child: _buildDailyRunHistory()),
+                SliverToBoxAdapter(child: _buildBestRank()),
               ],
             ),
           ],
@@ -162,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       margin: const EdgeInsets.all(24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: glowColor.withValues(alpha: 0.08),
+        color: const Color(0xFF16213E), // Arkaplanı saydam olmasın, düz renk olsun
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: glowColor, width: 2.5),
         boxShadow: [
@@ -176,15 +151,17 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            width: 72,
+            height: 72,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: glowColor.withValues(alpha: 0.15),
+              color: Colors.white.withValues(alpha: 0.1),
               shape: BoxShape.circle,
-              border: Border.all(color: glowColor, width: 1.5),
+              border: Border.all(color: glowColor, width: 2),
             ),
             child: Text(
               LeaderboardService().avatar,
-              style: const TextStyle(fontSize: 40),
+              style: const TextStyle(fontSize: 46), // Yuvarlağı tam doldursun
             ),
           ),
           const SizedBox(width: 20),
@@ -226,212 +203,111 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   Widget _buildStreakCard() {
     final streak = StreakService().currentStreak;
-    final bestStreak = StreakService().bestStreak;
-    final freezeCount = StreakService().freezeCount;
+    final isFrozen = StreakService().isFrozenToday;
     final canRestore = StreakService().canRestoreStreak;
     final lostStreak = StreakService().lostStreak;
-    final isFrozen = StreakService().isFrozenToday;
 
-    // Seri rengini ve temasını belirle
-    Color streakColor;
-    IconData streakIcon;
-    
-    if (isFrozen) {
-      streakColor = const Color(0xFF40C4FF); // Ice blue
-      streakIcon = Icons.ac_unit_rounded;
-    } else if (streak >= 30) {
-      streakColor = const Color(0xFFFF6B00); // Turuncu ateş
-      streakIcon = Icons.local_fire_department_rounded;
-    } else if (streak >= 14) {
-      streakColor = const Color(0xFFFF3D00); // Kırmızı ateş
-      streakIcon = Icons.local_fire_department_rounded;
-    } else if (streak >= 7) {
-      streakColor = const Color(0xFFFF9100); // Sarı-turuncu
-      streakIcon = Icons.local_fire_department_rounded;
+    Color streakColor = isFrozen ? const Color(0xFF40C4FF) : (streak > 0 ? const Color(0xFFFF9100) : Colors.grey.shade700);
+
+    String subtitle = '';
+    if (streak == 0) {
+      subtitle = AppStrings.streakZero;
+    } else if (streak < 3) {
+      subtitle = AppStrings.streakLow;
+    } else if (streak < 7) {
+      subtitle = AppStrings.streakMedium;
+    } else if (streak < 30) {
+      subtitle = AppStrings.streakHigh;
     } else {
-      streakColor = const Color(0xFFFF6E40); // Açık turuncu
-      streakIcon = Icons.local_fire_department_rounded;
+      subtitle = AppStrings.streakSuper;
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      decoration: BoxDecoration(
-        color: streakColor.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-          color: streakColor.withValues(alpha: 0.3),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 30,
-            spreadRadius: -5,
+    return GestureDetector(
+      onTap: () {
+        SoundService().playKeyTap();
+        _showCalendarDialog();
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              streakColor.withValues(alpha: 0.9),
+              streakColor.withValues(alpha: 0.7),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  // Ateş / Buz İkonu ve Seri Sayısı
-                  AnimatedBuilder(
-                    animation: _streakPulseAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: (streak > 0 || isFrozen) ? _streakPulseAnimation.value : 1.0,
-                        child: child,
-                      );
-                    },
-                    child: Column(
-                      children: [
-                        // İkon (Ateş veya Buz) Animasyonlu Shader ile
-                        AnimatedBuilder(
-                          animation: _fireAnimation,
-                          builder: (context, child) {
-                            return ShaderMask(
-                              shaderCallback: (bounds) => LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: isFrozen ? [
-                                  Color.lerp(const Color(0xFFE1F5FE), const Color(0xFF81D4FA), _fireAnimation.value)!,
-                                  Color.lerp(const Color(0xFF29B6F6), const Color(0xFF0277BD), _fireAnimation.value)!,
-                                ] : [
-                                  Color.lerp(const Color(0xFFFFEB3B), const Color(0xFFFF9800), _fireAnimation.value)!,
-                                  Color.lerp(const Color(0xFFFF5722), const Color(0xFFE64A19), _fireAnimation.value)!,
-                                ],
-                              ).createShader(bounds),
-                              child: Icon(
-                                streakIcon,
-                                size: 80,
-                                color: Colors.white,
-                                shadows: [
-                                  Shadow(
-                                    color: streakColor.withValues(alpha: 0.5),
-                                    blurRadius: 30,
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        // Seri Sayısı
-                        Text(
-                          '$streak',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 72,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            height: 1,
-                            shadows: [
-                              Shadow(color: streakColor.withValues(alpha: 0.5), blurRadius: 20),
-                              Shadow(color: streakColor.withValues(alpha: 0.3), blurRadius: 40),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          isFrozen ? "Donmuş Seri" : AppStrings.dailyStreak,
-                          style: GoogleFonts.nunito(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: isFrozen ? const Color(0xFF81D4FA) : Colors.white70,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // Alt Bilgi Kutuları (Donma Hakkı & En İyi Seri)
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.05),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildStreakInfoBox(
-                          icon: Icons.ac_unit_rounded,
-                          label: AppStrings.freezeChance,
-                          value: '$freezeCount',
-                          color: const Color(0xFF40C4FF),
-                        ),
-                        Container(
-                          width: 1,
-                          height: 40,
-                          color: Colors.white.withValues(alpha: 0.1),
-                        ),
-                        _buildStreakInfoBox(
-                          icon: Icons.emoji_events_rounded,
-                          label: AppStrings.bestStreak,
-                          value: '$bestStreak',
-                          color: const Color(0xFFFFD740),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Seri geri getirme butonu
-                  if (canRestore) ...[
-                    const SizedBox(height: 16),
-                    _buildRestoreStreakButton(lostStreak, streakColor),
-                  ],
-                ],
-              ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: streakColor.withValues(alpha: 0.3),
+              blurRadius: 20,
+              spreadRadius: 2,
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildStreakInfoBox({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 28, shadows: [Shadow(color: color.withValues(alpha: 0.5), blurRadius: 10)]),
-        const SizedBox(width: 10),
-        Column(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              value,
-              style: GoogleFonts.montserrat(
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                shadows: [Shadow(color: color.withValues(alpha: 0.5), blurRadius: 10)],
-              ),
+            Row(
+              children: [
+                Icon(isFrozen ? Icons.ac_unit_rounded : Icons.local_fire_department_rounded, color: Colors.white, size: 36),
+                const SizedBox(width: 8),
+                Text(
+                  '$streak ${AppStrings.days}',
+                  style: GoogleFonts.nunito(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.ac_unit_rounded, color: Colors.white, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${StreakService().freezeCount} / 5',
+                        style: GoogleFonts.nunito(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 8),
             Text(
-              label,
+              subtitle,
               style: GoogleFonts.nunito(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Colors.white60,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white.withValues(alpha: 0.9),
               ),
             ),
+            const SizedBox(height: 24),
+            _buildWeekTracker(),
+            if (canRestore) ...[
+              const SizedBox(height: 16),
+              _buildRestoreStreakButton(lostStreak, streakColor),
+            ],
           ],
         ),
-      ],
+      ),
     );
   }
+
 
   Widget _buildRestoreStreakButton(int lostStreak, Color streakColor) {
     return GestureDetector(
@@ -510,15 +386,16 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.local_fire_department_rounded,
-                size: 56,
-                color: Color(0xFFFF6E40),
-                shadows: [Shadow(color: Color(0xFFFF6E40), blurRadius: 16)],
-              ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.local_fire_department_rounded,
+                  size: 56,
+                  color: Color(0xFFFF6E40),
+                  shadows: [Shadow(color: Color(0xFFFF6E40), blurRadius: 16)],
+                ),
               const SizedBox(height: 16),
               Text(
                 AppStrings.restoreStreakTitle,
@@ -591,6 +468,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               ),
             ],
           ),
+          ),
         ),
       ),
     );
@@ -621,192 +499,233 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildDailyRunHistory() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            AppStrings.dailyRunHistory,
-            style: GoogleFonts.nunito(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              shadows: [
-                const Shadow(
-                  color: Color(0xFFFF007F), // Neon Pink
-                  blurRadius: 8,
-                ),
-              ],
+  Widget _buildWeekTracker() {
+    final today = DateTime.now();
+    List<Widget> dayWidgets = [];
+    
+    final playedDates = _dailyRunHistory.map((s) => s.date).toSet();
+
+    for (int i = 4; i >= 0; i--) {
+      final date = today.subtract(Duration(days: i));
+      final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final isPlayed = playedDates.contains(dateStr);
+      final isToday = i == 0;
+      
+      String dayName = '';
+      switch (date.weekday) {
+        case 1: dayName = AppStrings.mon; break;
+        case 2: dayName = AppStrings.tue; break;
+        case 3: dayName = AppStrings.wed; break;
+        case 4: dayName = AppStrings.thu; break;
+        case 5: dayName = AppStrings.fri; break;
+        case 6: dayName = AppStrings.sat; break;
+        case 7: dayName = AppStrings.sun; break;
+      }
+
+      dayWidgets.add(
+        Column(
+          children: [
+            Text(
+              dayName,
+              style: GoogleFonts.nunito(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: Colors.white.withValues(alpha: 0.8),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          if (_dailyRunHistory.isEmpty)
+            const SizedBox(height: 8),
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                shape: BoxShape.circle,
+                color: isPlayed ? Colors.white : Colors.white.withValues(alpha: 0.15),
+                border: isToday && !isPlayed ? Border.all(color: Colors.white, width: 2) : null,
               ),
-              child: Text(
-                AppStrings.noDailyRunHistory,
-                style: GoogleFonts.nunito(
-                  fontSize: 14,
-                  color: Colors.white54,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            )
-          else
-            // Sadece son 5 Daily Run gösterilsin
-            ..._dailyRunHistory.take(5).map((stat) {
-              final rank = _dailyRunRanks[stat.date];
-              return _buildDailyRunCard(stat, rank);
-            }),
-        ],
-      ),
+              child: isPlayed 
+                  ? const Icon(Icons.check_rounded, color: Color(0xFFFF9100), size: 24)
+                  : null,
+            ),
+          ],
+        )
+      );
+      
+      if (i > 0) {
+        dayWidgets.add(
+          Expanded(
+            child: Container(
+              height: 4,
+              margin: const EdgeInsets.only(top: 28),
+              color: Colors.white.withValues(alpha: 0.2),
+            ),
+          )
+        );
+      }
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: dayWidgets,
     );
   }
 
-  Widget _buildDailyRunCard(GameStat stat, int? rank) {
-    const glowColor = Color(0xFFFF007F); // Neon Pink
+  void _showCalendarDialog() {
+    final playedDates = _dailyRunHistory.map((s) => s.date).toSet();
+    final today = DateTime.now();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF16213E), Color(0xFF0F3460)],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 2),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    AppStrings.dailyStreak,
+                    style: GoogleFonts.nunito(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: List.generate(30, (index) {
+                    final date = today.subtract(Duration(days: 29 - index));
+                    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+                    final isPlayed = playedDates.contains(dateStr);
+                    final isToday = index == 29;
+                    
+                    return Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isPlayed ? const Color(0xFFFF9100) : Colors.white.withValues(alpha: 0.05),
+                        border: isToday ? Border.all(color: Colors.white, width: 2) : null,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${date.day}',
+                          style: GoogleFonts.nunito(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: isPlayed ? Colors.white : Colors.white54,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF9100),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: Text(
+                    AppStrings.close,
+                    style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBestRank() {
+    if (_dailyRunHistory.isEmpty) return const SizedBox.shrink();
+
+    int? bestRank;
+    String? bestDate;
+    
+    for (final stat in _dailyRunHistory) {
+      final rank = _dailyRunRanks[stat.date];
+      if (rank != null && rank > 0) {
+        if (bestRank == null || rank < bestRank) {
+          bestRank = rank;
+          bestDate = stat.date;
+        }
+      }
+    }
+
+    if (bestRank == null || bestDate == null) return const SizedBox.shrink();
+
+    final rankLabel = AppStrings.days == 'Gün' ? 'En İyi Sıralama' : 'Best Rank';
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: glowColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: glowColor.withValues(alpha: 0.4), width: 1.5),
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
-            color: glowColor.withValues(alpha: 0.1),
-            blurRadius: 8,
-            spreadRadius: 1,
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 10,
           ),
         ],
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: glowColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: glowColor.withValues(alpha: 0.8), width: 1.5),
-            ),
-            child: const Icon(Icons.directions_run_rounded, color: Colors.white, size: 24, shadows: [Shadow(color: glowColor, blurRadius: 8)]),
-          ),
+          const Icon(Icons.emoji_events_rounded, color: Color(0xFFFFD740), size: 48),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  stat.date,
+                  rankLabel,
                   style: GoogleFonts.nunito(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    shadows: [Shadow(color: glowColor.withValues(alpha: 0.5), blurRadius: 6)],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${stat.targetValue ?? AppStrings.unknown} • Puan: ${stat.score.toStringAsFixed(1)}',
-                  style: GoogleFonts.nunito(
-                    fontSize: 12,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white70,
-                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '#$bestRank',
+                  style: GoogleFonts.nunito(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    shadows: [
+                      const Shadow(color: Color(0xFFFFD740), blurRadius: 10),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          // Sıralama durumu
-          _buildRankWidget(rank),
-        ],
-      ),
-    );
-  }
-
-
-  Widget _buildRankWidget(int? rank) {
-    if (rank == null) {
-      // Yükleniyor durumu - Shimmer efekti
-      return Shimmer.fromColors(
-        baseColor: Colors.white.withValues(alpha: 0.1),
-        highlightColor: Colors.white.withValues(alpha: 0.3),
-        child: Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-      );
-    }
-
-    if (rank == -1) {
-      // Henüz oynanmadı
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-        ),
-        child: Column(
-          children: [
-            const Icon(Icons.videogame_asset_off_rounded, color: Colors.white38, size: 20),
-            const SizedBox(height: 4),
-            Text(
-              AppStrings.notPlayed,
-              style: GoogleFonts.nunito(
-                fontSize: 10,
-                color: Colors.white38,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Sıralamada var
-    final isTop3 = rank <= 3;
-    final color = isTop3 ? const Color(0xFFFFE81F) : const Color(0xFF00FFFF);
-    
-    return Container(
-      width: 60,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.2),
-            blurRadius: 8,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
           Text(
-            isTop3 ? ['🥇', '🥈', '🥉'][rank - 1] : '#$rank',
+            bestDate,
             style: GoogleFonts.nunito(
-              fontSize: isTop3 ? 20 : 16,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              shadows: [
-                Shadow(color: color, blurRadius: 10),
-              ],
+              fontSize: 14,
+              color: Colors.white54,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

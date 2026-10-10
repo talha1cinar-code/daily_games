@@ -12,6 +12,7 @@ import 'daily_run_screen.dart';
 import '../services/daily_run_service.dart';
 import '../services/leaderboard_service.dart';
 import '../services/streak_service.dart';
+import '../services/ad_service.dart';
 import 'leaderboard_screen.dart';
 import '../utils/network_utils.dart';
 import '../widgets/logo_background.dart';
@@ -75,6 +76,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (mounted) _card2Controller.forward();
     await Future.delayed(const Duration(milliseconds: 120));
     if (mounted) _card3Controller.forward();
+
+    if (mounted && StreakService().canRestoreStreak) {
+      _showRestoreStreakDialog();
+    }
   }
 
   @override
@@ -105,6 +110,147 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         transitionDuration: Duration.zero,
         reverseTransitionDuration: Duration.zero,
       ),
+    );
+  }
+
+  void _showRestoreStreakDialog() {
+    final lostStreak = StreakService().lostStreak;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1A0B2E), Color(0xFF0D0020)],
+            ),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: const Color(0xFFFF6E40).withValues(alpha: 0.6),
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF6E40).withValues(alpha: 0.3),
+                blurRadius: 20,
+                spreadRadius: 4,
+              ),
+            ],
+          ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.local_fire_department_rounded,
+                      size: 56,
+                      color: Color(0xFFFF6E40),
+                      shadows: [Shadow(color: Color(0xFFFF6E40), blurRadius: 16)],
+                    ),
+              const SizedBox(height: 16),
+              Text(
+                AppStrings.restoreStreakTitle,
+                style: GoogleFonts.nunito(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                AppStrings.restoreStreakBody(lostStreak),
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                AppStrings.limitedTimeOffer,
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  color: Colors.orangeAccent,
+                  fontWeight: FontWeight.w700,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              // Reklam izle butonu
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _watchAdAndRestore();
+                  },
+                  icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                  label: Text(
+                    AppStrings.watchAdAndRestore,
+                    style: GoogleFonts.nunito(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: const Color(0xFFFF6E40).withValues(alpha: 0.3),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: Color(0xFFFF6E40), width: 1.5),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        AppStrings.cancel,
+                        style: GoogleFonts.nunito(
+                          fontSize: 14,
+                          color: Colors.white38,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      );
+  }
+
+  void _watchAdAndRestore() {
+    AdService().showRewardedAd(
+      onUserEarnedReward: () async {
+        final success = await StreakService().restoreStreakWithAd();
+        if (mounted && success) {
+          SoundService().playWin();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppStrings.streakRestored,
+                style: GoogleFonts.nunito(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              backgroundColor: const Color(0xFFFF6E40),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }
+      },
     );
   }
 

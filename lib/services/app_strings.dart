@@ -105,6 +105,19 @@ class AppStrings {
   static String get dailyStreak => _lang == 'tr' ? 'Günlük Seri' : 'Daily Streak';
   static String get freezeChance => _lang == 'tr' ? 'Donma Hakkı' : 'Freeze Chance';
   static String get bestStreak => _lang == 'tr' ? 'En İyi Seri' : 'Best Streak';
+  static String get days => _lang == 'tr' ? 'Gün' : 'Days';
+  static String get streakZero => _lang == 'tr' ? 'Hemen seriye başla!' : 'Start your streak now!';
+  static String get streakLow => _lang == 'tr' ? 'İyi başlangıç!' : 'Good start!';
+  static String get streakMedium => _lang == 'tr' ? 'Ateş ediyorsun!' : 'You are on fire!';
+  static String get streakHigh => _lang == 'tr' ? 'Durdurulamazsın!' : 'Unstoppable!';
+  static String get streakSuper => _lang == 'tr' ? 'Bir efsanesin!' : 'You are a legend!';
+  static String get mon => _lang == 'tr' ? 'Pt' : 'Mo';
+  static String get tue => _lang == 'tr' ? 'Sa' : 'Tu';
+  static String get wed => _lang == 'tr' ? 'Ça' : 'We';
+  static String get thu => _lang == 'tr' ? 'Pe' : 'Th';
+  static String get fri => _lang == 'tr' ? 'Cu' : 'Fr';
+  static String get sat => _lang == 'tr' ? 'Ct' : 'Sa';
+  static String get sun => _lang == 'tr' ? 'Pa' : 'Su';
   static String restoreStreak(int count) =>
       _lang == 'tr' ? 'Seriyi Geri Getir ($count 🔥)' : 'Restore Streak ($count 🔥)';
   static String get restoreStreakTitle =>
@@ -159,12 +172,12 @@ class AppStrings {
       _lang == 'tr' ? 'Akşam Daily Run\'ı Bitmek Üzere' : 'Evening Daily Run Ending Soon';
   static String get eveningRunReminderBody =>
       _lang == 'tr' ? 'Akşam oyunlarını tamamlamak için son 1 saatin kaldı.' : 'You have 1 hour left to complete evening games.';
-  static String get streakSavedTitle => _lang == 'tr' ? 'Serin Kurtarıldı' : 'Streak Saved';
+  static String get streakSavedTitle => _lang == 'tr' ? 'Serin Dondu' : 'Streak Frozen';
   static String get streakSavedBody => _lang == 'tr'
-      ? '1 Dondurma hakkın kullanıldı, şuanki Daily Run\'a katıl ve serini kurtar'
-      : '1 Freeze used, join current Daily Run to save your streak';
-  static String get streakLostTitle => _lang == 'tr' ? 'Serin Sıfırlandı!' : 'Streak Reset!';
+      ? 'Dondurma hakkın kullanıldı, hakkın bitmeden serini kurtar.'
+      : 'Your freeze chance was used, save your streak before it runs out.';
+  static String get streakLostTitle => _lang == 'tr' ? 'Son Şans!' : 'Last Chance!';
   static String get streakLostBody => _lang == 'tr'
-      ? 'Oyuna gir belki kurtarma hakkı kazanırsın'
-      : 'Play now, you might earn a restore chance';
+      ? 'Serini kurtarmak için son şansın, hemen kurtar.'
+      : 'This is your last chance to restore your streak, do it now.';
 }

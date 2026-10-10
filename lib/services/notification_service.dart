@@ -189,8 +189,8 @@ class NotificationService {
     }
 
     final now = tz.TZDateTime.now(tz.local);
-    // Bugünün 10:00'u referans alınarak üzerine eklenecek
-    final baseDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, 10, 0);
+    // Bugünün 21:00'i referans alınarak üzerine eklenecek
+    final baseDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, 21, 0);
 
     for (int i = 0; i <= freezeCount; i++) {
       final notificationDate = baseDate.add(Duration(days: 2 + i));
