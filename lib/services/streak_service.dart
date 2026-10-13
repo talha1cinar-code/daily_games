@@ -37,6 +37,7 @@ class StreakService extends ChangeNotifier {
   int _lostStreak = 0; // Kaybedilen seri değeri
   String _lostDate = ''; // Serinin kaybolduğu tarih
   bool _restored = false; // Bu kayıp zaten geri getirildi mi
+  bool _restorePromptShown = false; // İlk girişte serini kurtar penceresi gösterildi mi
 
   // ─── Getter'lar ────────────────────────────────────────────────
   int get currentStreak => _currentStreak;
@@ -47,6 +48,8 @@ class StreakService extends ChangeNotifier {
   bool get canRestoreStreak {
     if (_lostStreak <= 0 || _restored) return false;
     if (_lostDate.isEmpty) return false;
+    // Mevcut seri eski kaybedilen seriyi yakaladıysa veya geçtiyse kurtarma seçeneği kaybolur
+    if (_currentStreak >= _lostStreak) return false;
     
     final lostDay = _parseDate(_lostDate);
     if (lostDay == null) return false;
@@ -54,6 +57,17 @@ class StreakService extends ChangeNotifier {
     final today = _todayDate();
     final diff = today.difference(lostDay).inDays;
     return diff <= restoreWindowDays;
+  }
+
+  /// Seri sıfırlandıktan sonraki ilk girişte miyiz kontrolü
+  bool get shouldShowRestorePrompt => canRestoreStreak && !_restorePromptShown;
+
+  /// İlk giriş penceresinin gösterildiğini işaretler
+  Future<void> markRestorePromptShown() async {
+    if (!_restorePromptShown) {
+      _restorePromptShown = true;
+      await _save();
+    }
   }
 
   bool get isFreezeAvailable => _freezeCount > 0;
@@ -71,6 +85,8 @@ class StreakService extends ChangeNotifier {
     _load();
     // Her açılışta gün kontrolü yap
     _checkDayGap();
+    // Seri bildirimlerini senkronize et
+    await updateStreakNotifications();
   }
 
   void _load() {
@@ -87,6 +103,7 @@ class StreakService extends ChangeNotifier {
       _lostStreak = data['lostStreak'] as int? ?? 0;
       _lostDate = data['lostDate'] as String? ?? '';
       _restored = data['restored'] as bool? ?? false;
+      _restorePromptShown = data['restorePromptShown'] as bool? ?? false;
     } catch (_) {}
   }
 
@@ -99,13 +116,24 @@ class StreakService extends ChangeNotifier {
       'lostStreak': _lostStreak,
       'lostDate': _lostDate,
       'restored': _restored,
+      'restorePromptShown': _restorePromptShown,
     };
     await _prefs?.setString(_key, jsonEncode(data));
     
     // Seri bildirimlerini güncelle
-    await NotificationService().scheduleStreakNotifications(_freezeCount);
+    await updateStreakNotifications();
     
     notifyListeners();
+  }
+
+  /// Seri bildirimlerini güncel duruma göre senkronize eder
+  Future<void> updateStreakNotifications() async {
+    final isPlayed = _lastPlayedDate == _todayKey();
+    await NotificationService().scheduleStreakNotifications(
+      currentStreak: _currentStreak,
+      freezeCount: _freezeCount,
+      isPlayedToday: isPlayed,
+    );
   }
 
   // ─── Gün hesaplama ─────────────────────────────────────────────
@@ -161,6 +189,7 @@ class StreakService extends ChangeNotifier {
       _lostStreak = _currentStreak;
       _lostDate = _todayKey();
       _restored = false;
+      _restorePromptShown = false; // Yeni kayıp: ilk girişte kullanıcıya gösterilecek
       _currentStreak = 0;
       _freezeCount = defaultFreezeCount; // Freeze'leri sıfırla
       _lastPlayedDate = '';
@@ -211,6 +240,13 @@ class StreakService extends ChangeNotifier {
       _bestStreak = _currentStreak;
     }
 
+    // Eğer kullanıcı mevcut serisini restore edebileceği eski serisine eşitledi veya daha fazla yaptıysa bu seçenek kaybolur
+    if (_lostStreak > 0 && _currentStreak >= _lostStreak) {
+      _lostStreak = 0;
+      _lostDate = '';
+      _restorePromptShown = false;
+    }
+
     AnalyticsService().logStreakAchieved(_currentStreak);
 
     if (_currentStreak == 7) {
@@ -232,6 +268,7 @@ class StreakService extends ChangeNotifier {
     _lostStreak = 0;
     _lostDate = '';
     _restored = true;
+    _restorePromptShown = false;
     _freezeCount = defaultFreezeCount; // Freeze'leri de yenile
     
     // lastPlayedDate'i dün olarak ayarla ki bugün oynandığında +1 olsun

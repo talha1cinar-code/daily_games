@@ -172,6 +172,11 @@ class AppStrings {
       _lang == 'tr' ? 'Akşam Daily Run\'ı Bitmek Üzere' : 'Evening Daily Run Ending Soon';
   static String get eveningRunReminderBody =>
       _lang == 'tr' ? 'Akşam oyunlarını tamamlamak için son 1 saatin kaldı.' : 'You have 1 hour left to complete evening games.';
+  static String get streakReminderTitle =>
+      _lang == 'tr' ? 'Serini Kaybetme! 🔥' : 'Keep Your Streak! 🔥';
+  static String get streakReminderBody => _lang == 'tr'
+      ? 'Bugünkü Daily Run\'ı tamamla, serin bozulmasın!'
+      : 'Complete today\'s Daily Run to keep your streak alive!';
   static String get streakSavedTitle => _lang == 'tr' ? 'Serin Dondu' : 'Streak Frozen';
   static String get streakSavedBody => _lang == 'tr'
       ? 'Dondurma hakkın kullanıldı, hakkın bitmeden serini kurtar.'

@@ -53,9 +53,8 @@ void main() async {
   await LeaderboardService().init();
   await DailyRunService().init();
   await NetworkUtils.syncTime();
-  await StreakService().init();
-  
   await NotificationService().init();
+  await StreakService().init();
   await AnalyticsService().init();
   
   await MobileAds.instance.initialize();
@@ -85,7 +84,9 @@ class _DailyGamesAppState extends State<DailyGamesApp> with WidgetsBindingObserv
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await NotificationService().requestPermissions();
       await NotificationService().scheduleDailyNotifications();
+      await StreakService().updateStreakNotifications();
     });
   }
 

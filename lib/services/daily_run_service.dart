@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'leaderboard_service.dart';
 import 'stats_service.dart';
-import 'notification_service.dart';
 import 'streak_service.dart';
 import 'analytics_service.dart';
 import '../utils/network_utils.dart';
@@ -205,13 +204,6 @@ class DailyRunService extends ChangeNotifier {
       
       final currentKey = '$_prefsKeyPrefix${_runKey(currentRunSlot())}';
       await _prefs?.setString('active_run_key', currentKey);
-      
-      final slot = currentRunSlot();
-      if (slot == 1) {
-        NotificationService().cancelMorningReminder();
-      } else {
-        NotificationService().cancelEveningReminder();
-      }
       
       notifyListeners();
     }

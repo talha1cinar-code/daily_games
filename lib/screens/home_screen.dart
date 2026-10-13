@@ -16,6 +16,7 @@ import '../services/ad_service.dart';
 import 'leaderboard_screen.dart';
 import '../utils/network_utils.dart';
 import '../widgets/logo_background.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -77,7 +78,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     await Future.delayed(const Duration(milliseconds: 120));
     if (mounted) _card3Controller.forward();
 
-    if (mounted && StreakService().canRestoreStreak) {
+    if (mounted && StreakService().shouldShowRestorePrompt) {
+      StreakService().markRestorePromptShown();
       _showRestoreStreakDialog();
     }
   }
@@ -403,13 +405,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 _buildMoreSettingRow(
                   icon: Icons.privacy_tip_rounded,
                   title: AppStrings.privacyPolicy,
-                  onTap: () {},
+                  onTap: () {
+                    _launchUrlHelper('https://daily-games-6b0e3.web.app/privacy.html');
+                  },
                 ),
                 const SizedBox(height: 8),
                 _buildMoreSettingRow(
                   icon: Icons.description_rounded,
                   title: AppStrings.termsOfService,
-                  onTap: () {},
+                  onTap: () {
+                    _launchUrlHelper('https://daily-games-6b0e3.web.app/terms.html');
+                  },
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton(
@@ -431,6 +437,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         );
       },
     );
+  }
+
+  Future<void> _launchUrlHelper(String urlStr) async {
+    final uri = Uri.parse(urlStr);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Link açılamadı: $e');
+    }
   }
 
   Widget _buildIconToggle({
