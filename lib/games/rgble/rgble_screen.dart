@@ -9,10 +9,11 @@ import '../../services/daily_challenge_service.dart';
 import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
+import '../../services/personal_best_service.dart';
 import 'rgble_game.dart';
 import '../../services/language_service.dart';
 
-/// RGBle oyun ekranı — 5 round'luk renk eşleştirme.
+/// RGBle oyun ekranı — 3 round'luk renk eşleştirme.
 ///
 /// Akış: Başla → Hazır/Başla animasyonu → Renk göster (5sn geri sayım)
 ///       → HSV renk seçici → Puan → Sonraki round...  → Final skor
@@ -140,7 +141,7 @@ class _RgbleScreenState extends State<RgbleScreen>
     // "Başla!" / "Go!"
     setState(() => _countdownText = LanguageService().isTurkish ? 'Başla!' : 'Go!');
     _textScaleController.forward(from: 0.0);
-    _sound.playWin();
+    _sound.playGo();
     await Future.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
 
@@ -192,7 +193,7 @@ class _RgbleScreenState extends State<RgbleScreen>
     _scoreAnimController.forward(from: 0.0);
 
     if (score >= 8.0) {
-      _sound.playWin();
+      _sound.playCorrect();
     } else {
       _sound.playFlip();
     }
@@ -202,7 +203,7 @@ class _RgbleScreenState extends State<RgbleScreen>
     if (_game.isGameOver) {
       setState(() => _phase = _GamePhase.gameOver);
       
-      final isWin = _game.totalScore >= 30;
+      final isWin = _game.totalScore >= RgbleGame.maxTotal * 0.6;
       if (isWin) {
         _sound.playWin();
       } else {
@@ -235,6 +236,15 @@ class _RgbleScreenState extends State<RgbleScreen>
           attempts: _game.roundScores.length,
           maxAttempts: RgbleGame.totalRounds,
           isWin: isWin,
+        );
+      } else {
+        PersonalBestService().submit(
+          'rgble',
+          LeaderboardService.calculateLeaderboardScore(
+            gameId: 'rgble',
+            isWin: isWin,
+            score: _game.totalScore,
+          ),
         );
       }
     } else {
@@ -357,7 +367,9 @@ class _RgbleScreenState extends State<RgbleScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  LanguageService().currentLanguage == 'tr' ? '5 round • 10 puan/round • 50 toplam' : '5 rounds • 10 points/round • 50 total',
+                  LanguageService().currentLanguage == 'tr'
+                      ? '${RgbleGame.totalRounds} round • 10 puan/round • ${RgbleGame.maxTotal.toInt()} toplam'
+                      : '${RgbleGame.totalRounds} rounds • 10 points/round • ${RgbleGame.maxTotal.toInt()} total',
                   style: GoogleFonts.nunito(
                     fontSize: 13,
                     color: Colors.white.withValues(alpha: 0.25),
@@ -1004,7 +1016,7 @@ class _RgbleScreenState extends State<RgbleScreen>
                 style: GoogleFonts.nunito(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: _getScoreColor(total / 5),
+                  color: _getScoreColor(total / RgbleGame.totalRounds),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -1031,7 +1043,7 @@ class _RgbleScreenState extends State<RgbleScreen>
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Text(
-                        ' / 50',
+                        ' / ${RgbleGame.maxTotal.toInt()}',
                         style: GoogleFonts.nunito(
                           fontSize: 24,
                           fontWeight: FontWeight.w500,
@@ -1180,7 +1192,7 @@ class _RgbleScreenState extends State<RgbleScreen>
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () => Navigator.of(context).maybePop(),
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(

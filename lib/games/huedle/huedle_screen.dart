@@ -6,6 +6,7 @@ import '../../services/sound_service.dart';
 import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
+import '../../services/personal_best_service.dart';
 import '../../services/daily_challenge_service.dart';
 import '../../services/language_service.dart';
 
@@ -242,7 +243,15 @@ class _HuedleScreenState extends State<HuedleScreen>
         isWin: true,
       );
     } else {
-      // Bilet bottom sheet'te zaten düşürüldü
+      PersonalBestService().submit(
+        'huedle',
+        LeaderboardService.calculateLeaderboardScore(
+          gameId: 'huedle',
+          isWin: true,
+          score: _score.toDouble(),
+          durationMs: durationMs,
+        ),
+      );
     }
   }
 
@@ -400,7 +409,7 @@ class _HuedleScreenState extends State<HuedleScreen>
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () => Navigator.maybePop(context),
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(

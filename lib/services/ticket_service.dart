@@ -186,6 +186,18 @@ class TicketService extends ChangeNotifier {
     AnalyticsService().logTicketEarned(maxTickets - state.tickets, 'ad_reward');
   }
 
+  /// Coin ile doldurma: reklam bekleme süresine dokunmadan biletleri fuller.
+  void refillWithCoins(String gameId) {
+    final state = getTicketState(gameId);
+    _saveState(gameId, TicketState(
+      tickets: maxTickets,
+      lastRecharge: null,
+      lastDailyPlayedDate: state.lastDailyPlayedDate,
+      lastAdWatchTime: state.lastAdWatchTime,
+    ));
+    AnalyticsService().logTicketEarned(maxTickets - state.tickets, 'coins');
+  }
+
   /// Bugün günlük oyun oynanmış mı?
   bool isDailyPlayed(String gameId) {
     final state = getTicketState(gameId);

@@ -61,6 +61,15 @@ class AnalyticsService {
     await logCustomEvent('ticket_spent', {'amount': amount, 'item': item});
   }
 
+  Future<void> logCoinsEarned(int amount, String source) async {
+    await _analytics?.logEarnVirtualCurrency(virtualCurrencyName: 'coin', value: amount);
+    await logCustomEvent('coins_earned', {'amount': amount, 'source': source});
+  }
+
+  Future<void> logCoinsSpent(int amount, String item) async {
+    await _analytics?.logSpendVirtualCurrency(itemName: item, virtualCurrencyName: 'coin', value: amount);
+  }
+
   // --- Engagement ---
   Future<void> logStreakAchieved(int streakDays) async {
     await logCustomEvent('streak_achieved', {'days': streakDays});

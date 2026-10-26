@@ -7,6 +7,7 @@ import '../../services/sound_service.dart';
 import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
+import '../../services/personal_best_service.dart';
 import '../../services/daily_challenge_service.dart';
 import '../../services/app_strings.dart';
 import '../../services/language_service.dart';
@@ -238,7 +239,7 @@ class _MemorleScreenState extends State<MemorleScreen>
   }
 
   void _onCorrectAnswer() {
-    _sound.playWin();
+    _sound.playCorrect();
     final levelScore = _getLevelScore();
     _resultController.forward(from: 0);
 
@@ -320,6 +321,16 @@ class _MemorleScreenState extends State<MemorleScreen>
         maxAttempts: _level - 1,
         durationMs: durationMs,
         isWin: true,
+      );
+    } else {
+      PersonalBestService().submit(
+        'memorle',
+        LeaderboardService.calculateLeaderboardScore(
+          gameId: 'memorle',
+          isWin: true,
+          score: _score.toDouble(),
+          durationMs: durationMs,
+        ),
       );
     }
   }
@@ -527,7 +538,7 @@ class _MemorleScreenState extends State<MemorleScreen>
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () => Navigator.maybePop(context),
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(

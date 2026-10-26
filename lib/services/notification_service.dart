@@ -1,7 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'dart:io';
 import 'app_strings.dart';
 
@@ -19,9 +19,7 @@ class NotificationService {
   static const int _morningRunReminderId = 201; // Kaldırılan sabah hatırlatması (16:00)
   static const int _eveningRunReminderId = 202; // Kaldırılan akşam hatırlatması (23:00)
 
-  // Seri bildirim ID'leri
-  static const int _streakReminderTodayId = 300; // Bugünkü seriyi koruma hatırlatması
-  static const int _streakSavedBaseId = 301; // Dondurma ve kayıp bildirimleri (301-306)
+  // Seri bildirimleri 300-330 aralığını kullanır (bkz. scheduleStreakNotifications)
 
   Future<void> init() async {
     // Zaman dilimi verilerini yükle (timezone)
@@ -31,7 +29,7 @@ class NotificationService {
 
     // Android için init
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('ic_stat_flame');
 
     // iOS için init (Darwin)
     const DarwinInitializationSettings initializationSettingsDarwin =
@@ -111,14 +109,8 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.cancel(id: _morningRunReminderId);
     await flutterLocalNotificationsPlugin.cancel(id: _eveningRunReminderId);
 
-    // Sabah Daily Run başlangıç (12:00)
-    await _scheduleDailyNotification(
-      id: _morningRunStartId,
-      title: AppStrings.morningRunStartedTitle,
-      body: AppStrings.runStartedBody,
-      hour: 12,
-      minute: 0,
-    );
+    // Sabah turu gece yarısı başlar; 12:00 bildirimi yanıltıcıydı, kaldırıldı
+    await flutterLocalNotificationsPlugin.cancel(id: _morningRunStartId);
 
     // Akşam Daily Run başlangıç (17:00)
     await _scheduleDailyNotification(
@@ -150,7 +142,8 @@ class NotificationService {
             channelDescription: 'Daily Run başlangıç bildirimleri',
             importance: Importance.max,
             priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
+            icon: 'ic_stat_flame',
+            color: Color(0xFFFF7A2F),
           ),
           iOS: DarwinNotificationDetails(
             presentAlert: true,
@@ -192,73 +185,105 @@ class NotificationService {
 
   /// Tüm seri bildirimlerini temizler
   Future<void> cancelAllStreakNotifications() async {
-    for (int id = 300; id <= 315; id++) {
+    for (int id = 300; id <= 330; id++) {
       try {
         await flutterLocalNotificationsPlugin.cancel(id: id);
       } catch (_) {}
     }
   }
 
-  /// Seri durumuna göre bildirimleri programlar
+  /// Duolingo tarzı seri bildirimleri. Bugün ve sonraki [_planDays] gün için
+  /// "kullanıcı hiç oynamazsa" senaryosuna göre önceden planlanır; oyun
+  /// bitince yeniden hesaplanır ve o günün hatırlatmaları iptal olur.
+  ///
+  /// Gün başına en fazla 3 bildirim: kişinin genelde oynadığı saatte
+  /// hatırlatma, 22:00 "tehlikede", 23:15 "son şans".
+  static const int _planDays = 3;
+
   Future<void> scheduleStreakNotifications({
     required int currentStreak,
     required int freezeCount,
     required bool isPlayedToday,
+    required int preferredHour,
+    required bool canRestore,
+    required int lostStreak,
   }) async {
-    // Önceki tüm seri bildirimlerini temizle
     await cancelAllStreakNotifications();
+    final now = tz.TZDateTime.now(tz.local);
 
-    // Aktif bir seri yoksa seri bildirimi kurulmaz
+    Future<void> at(int dayOffset, int slot, int hour, int minute, String title, String body) async {
+      final when = tz.TZDateTime(tz.local, now.year, now.month, now.day + dayOffset, hour, minute);
+      if (!when.isAfter(now)) return;
+      await _scheduleOneTimeNotification(id: 300 + dayOffset * 3 + slot, title: title, body: body, scheduledDate: when);
+    }
+
+    // Seri yoksa: yalnızca nazik bir günlük davet (kayıp seri geri getirilebiliyorsa onu hatırlat)
     if (currentStreak <= 0) {
+      for (var d = 0; d <= _planDays; d++) {
+        if (d == 0 && isPlayedToday) continue;
+        if (canRestore && d <= 1 && lostStreak > 0) {
+          await at(d, 0, preferredHour, 0, AppStrings.streakRestoreNotifTitle(lostStreak),
+              AppStrings.streakRestoreNotifBody);
+        } else {
+          final (t, b) = AppStrings.comeBackNotif(d);
+          await at(d, 0, preferredHour, 0, t, b);
+        }
+      }
       return;
     }
 
-    final now = tz.TZDateTime.now(tz.local);
+    for (var d = 0; d <= _planDays; d++) {
+      if (d == 0 && isPlayedToday) continue;
+      // Bu güne kadar tamamen kaçırılmış gün sayısı (bugün dahil değil)
+      final missedBefore = isPlayedToday ? d - 1 : d;
+      final freezesLeft = freezeCount - missedBefore;
 
-    // 1. Bugün henüz oynanmadıysa seriyi koruma hatırlatması (Bugün 20:00)
-    if (!isPlayedToday) {
-      final todayReminderTime =
-          tz.TZDateTime(tz.local, now.year, now.month, now.day, 20, 0);
-      if (todayReminderTime.isAfter(now)) {
-        await _scheduleOneTimeNotification(
-          id: _streakReminderTodayId,
-          title: AppStrings.streakReminderTitle,
-          body: AppStrings.streakReminderBody,
-          scheduledDate: todayReminderTime,
-        );
-      }
-    }
-
-    // 2. Gelecek günler için donma ve son şans bildirimleri:
-    // Bugün oynandıysa: ilk kaçırma yarın olur, donma bildirimi yarından sonraki gün (2 gün sonra) başlar.
-    // Bugün oynanmadıysa: ilk kaçırma bugündür, donma bildirimi yarın (1 gün sonra) başlar.
-    final int daysOffset = isPlayedToday ? 2 : 1;
-    final baseDate =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, 20, 30);
-
-    for (int i = 0; i <= freezeCount; i++) {
-      final notificationDate =
-          baseDate.add(Duration(days: daysOffset + i));
-      final id = _streakSavedBaseId + i;
-
-      if (i < freezeCount) {
-        // Donma kullanıldı bildirimi
-        await _scheduleOneTimeNotification(
-          id: id,
-          title: AppStrings.streakSavedTitle,
-          body: AppStrings.streakSavedBody,
-          scheduledDate: notificationDate,
-        );
+      if (missedBefore == 0) {
+        // Seri sağlam: bugün oynarsa uzar
+        final (t, b) = AppStrings.streakReminderNotif(currentStreak, d);
+        await at(d, 0, preferredHour, 0, t, b);
+      } else if (freezesLeft >= 0) {
+        // Dün kaçırıldı, donma hakkı seriyi kurtardı
+        await at(d, 0, preferredHour, 0, AppStrings.streakFrozenNotifTitle, AppStrings.streakFrozenNotifBody(currentStreak));
       } else {
-        // Seri tamamen sıfırlandı / Son şans bildirimi
-        await _scheduleOneTimeNotification(
-          id: id,
-          title: AppStrings.streakLostTitle,
-          body: AppStrings.streakLostBody,
-          scheduledDate: notificationDate,
-        );
+        // Hak yetmedi: seri bitti. Bir kez haber ver, sonra sus.
+        await at(d, 0, preferredHour, 0, AppStrings.streakRestoreNotifTitle(currentStreak), AppStrings.streakRestoreNotifBody);
+        break;
       }
+
+      await at(d, 1, 22, 0, AppStrings.streakAtRiskTitle, AppStrings.streakAtRiskBody(currentStreak));
+      await at(
+        d,
+        2,
+        23,
+        15,
+        AppStrings.streakLastChanceTitle,
+        freezesLeft > 0 ? AppStrings.streakFreezeWillSave : AppStrings.streakWillReset(currentStreak),
+      );
     }
+  }
+
+  static const int _duelReminderId = 400;
+
+  /// Sırası gelen düello varsa 3 saat sonra (gece ise ertesi gün 12:00) bir
+  /// hatırlatma kurar. Sunucu olmadığından rakibin hamlesini anında bildiremeyiz.
+  Future<void> scheduleDuelReminder({required int pending}) async {
+    try {
+      await flutterLocalNotificationsPlugin.cancel(id: _duelReminderId);
+    } catch (_) {}
+    if (pending <= 0) return;
+    final now = tz.TZDateTime.now(tz.local);
+    var when = now.add(const Duration(hours: 3));
+    if (when.hour >= 22 || when.hour < 10) {
+      final base = now.hour >= 10 ? now.add(const Duration(days: 1)) : now;
+      when = tz.TZDateTime(tz.local, base.year, base.month, base.day, 12);
+    }
+    await _scheduleOneTimeNotification(
+      id: _duelReminderId,
+      title: AppStrings.duelReminderTitle,
+      body: AppStrings.duelReminderBody(pending),
+      scheduledDate: when,
+    );
   }
 
   Future<void> _scheduleOneTimeNotification({
@@ -280,7 +305,8 @@ class NotificationService {
             channelDescription: 'Seri durumu ve dondurma hakkı bildirimleri',
             importance: Importance.max,
             priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
+            icon: 'ic_stat_flame',
+            color: Color(0xFFFF7A2F),
           ),
           iOS: DarwinNotificationDetails(
             presentAlert: true,

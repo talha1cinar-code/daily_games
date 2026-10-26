@@ -7,6 +7,7 @@ import '../../services/daily_challenge_service.dart';
 import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
+import '../../services/personal_best_service.dart';
 import 'wikitrivia_game.dart';
 import 'wikitrivia_data.dart';
 import '../../services/language_service.dart';
@@ -105,6 +106,16 @@ class _WikitriviaScreenState extends State<WikitriviaScreen>
               maxAttempts: 10,
               durationMs: durationMs,
               isWin: true,
+            );
+          } else {
+            PersonalBestService().submit(
+              'wikitrivia',
+              LeaderboardService.calculateLeaderboardScore(
+                gameId: 'wikitrivia',
+                isWin: true,
+                score: _game.score.toDouble(),
+                durationMs: durationMs,
+              ),
             );
           }
           Future.delayed(
@@ -326,7 +337,7 @@ class _WikitriviaScreenState extends State<WikitriviaScreen>
         children: [
           // Geri butonu
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () => Navigator.of(context).maybePop(),
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(

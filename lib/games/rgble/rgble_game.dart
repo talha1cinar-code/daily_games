@@ -2,9 +2,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../services/language_service.dart';
 
-/// RGBle oyun mantığı — 5 round'luk renk eşleştirme oyunu.
+/// RGBle oyun mantığı — 3 round'luk renk eşleştirme oyunu.
 class RgbleGame {
-  static const int totalRounds = 5;
+  static const int totalRounds = 3;
+  static const double maxTotal = totalRounds * 10.0;
   static const double maxScorePerRound = 10.0;
 
   final List<Color> targetColors = [];
@@ -14,8 +15,8 @@ class RgbleGame {
   bool isGameOver = false;
 
   RgbleGame({List<Color>? externalColors}) {
-    if (externalColors != null && externalColors.length == totalRounds) {
-      targetColors.addAll(externalColors);
+    if (externalColors != null && externalColors.length >= totalRounds) {
+      targetColors.addAll(externalColors.take(totalRounds));
     } else {
       _generateTargetColors();
     }
@@ -29,7 +30,7 @@ class RgbleGame {
   /// Rastgele renkler üret (Biletli mod için)
   static List<Color> getRandomColors() {
     final random = Random();
-    return List.generate(5, (_) {
+    return List.generate(totalRounds, (_) {
       return HSVColor.fromAHSV(
         1.0,
         random.nextDouble() * 360,

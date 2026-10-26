@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Günlük challenge override (admin yazabilir, herkes okuyabilir)
+    match /daily_challenges/{dateDoc} {
+      allow read: if true;
+      allow write: if false; // Sadece Firebase Console'dan yazılır
+    }
+
+    // Leaderboard entries
+    match /leaderboards/{runId}/entries/{entryId} {
+      allow read: if true;
+      allow create: if request.resource.data.score >= 0
+                    && request.resource.data.score <= 5000;
+      allow update: if false; // Skor bir kez yazılır
+      allow delete: if false;
+    }
+
+    // Haftalık leaderboard
+    match /weekly_leaderboards/{weekId}/entries/{entryId} {
+      allow read: if true;
+      allow write: if request.resource.data.totalScore >= 0
+                   && request.resource.data.totalScore <= 12000;
+    }
+
+    // Düello: kupa ligi profilleri (cihaz kimliğiyle)
+    match /duel_profiles/{userId} {
+      allow read: if true;
+      allow write: if request.resource.data.trophies is int
+                   && request.resource.data.trophies >= 0
+                   && request.resource.data.trophies <= 100000
+                   && request.resource.data.name is string
+                   && request.resource.data.name.size() <= 40;
+    }
+
+    // Düello: rakip bekleme kuyruğu; herkes yalnızca kendi kimliğiyle girer
+    match /duel_queue/{userId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.userId == userId;
+      allow delete: if true; // eşleşen rakip kuyruktan siler
+    }
+
+    // Düello maçları: oyuncular, oyunlar ve seed değişmez; bitmiş maça yazılmaz
+    match /duels/{duelId} {
+      allow read: if true;
+      allow create: if request.resource.data.players is list
+                    && request.resource.data.players.size() == 2
+                    && request.resource.data.games is list
+                    && request.resource.data.games.size() == 3
+                    && request.resource.data.seed is int
+                    && request.resource.data.status == 'active'
+                    && request.resource.data.scores.size() == 0;
+      allow update: if resource.data.status == 'active'
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['scores', 'status', 'winner', 'updatedAt', 'names', 'avatars', 'banners'])
+                    && request.resource.data.status in ['active', 'done'];
+      allow delete: if false;
+    }
+  }
+}

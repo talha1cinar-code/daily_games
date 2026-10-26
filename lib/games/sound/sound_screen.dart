@@ -10,6 +10,7 @@ import '../../services/daily_challenge_service.dart';
 import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
+import '../../services/personal_best_service.dart';
 import 'sound_game.dart';
 import '../../services/language_service.dart';
 
@@ -120,7 +121,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
 
     setState(() => _countdownText = LanguageService().isTurkish ? 'Başla!' : 'Go!');
     _textScaleController.forward(from: 0.0);
-    _appSound.playWin();
+    _appSound.playGo();
     await Future.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
 
@@ -205,7 +206,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
     });
 
     if (score >= 8.0) {
-      _appSound.playWin();
+      _appSound.playCorrect();
     } else {
       _appSound.playFlip();
     }
@@ -215,7 +216,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
       if (_game.isGameOver) {
         setState(() => _phase = _GamePhase.gameOver);
         
-        final isWin = _game.totalScore >= 30;
+        final isWin = _game.totalScore >= SoundGame.maxTotal * 0.6;
         if (isWin) {
           _appSound.playWin();
         } else {
@@ -249,6 +250,15 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
             maxAttempts: SoundGame.totalRounds,
             isWin: isWin,
           );
+        } else {
+          PersonalBestService().submit(
+            'sound',
+            LeaderboardService.calculateLeaderboardScore(
+              gameId: 'sound',
+              isWin: isWin,
+              score: _game.totalScore,
+            ),
+          );
         }
       } else {
         _startRound();
@@ -277,7 +287,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
           else
             const SizedBox(),
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () => Navigator.maybePop(context),
             child: Icon(Icons.close, color: Colors.white.withValues(alpha: 0.5)),
           ),
         ],
@@ -403,7 +413,7 @@ class _SoundScreenState extends State<SoundScreen> with TickerProviderStateMixin
                 ),
                 const SizedBox(height: 32),
                 Text(
-                  '${_game.totalScore.toStringAsFixed(1)} / 50.0',
+                  '${_game.totalScore.toStringAsFixed(1)} / ${SoundGame.maxTotal.toStringAsFixed(1)}',
                   style: GoogleFonts.nunito(
                     fontSize: 48,
                     fontWeight: FontWeight.w900,

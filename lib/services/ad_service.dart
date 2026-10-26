@@ -41,6 +41,8 @@ class AdService {
     createRewardedAd();
   }
 
+  bool get isRewardedReady => _rewardedAd != null;
+
   void createInterstitialAd() {
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,

@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
+import 'screens/onboarding_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'services/settings_service.dart';
 import 'services/language_service.dart';
@@ -18,6 +20,13 @@ import 'services/notification_service.dart';
 import 'services/streak_service.dart';
 import 'services/ad_service.dart';
 import 'services/analytics_service.dart';
+import 'services/personal_best_service.dart';
+import 'services/achievement_service.dart';
+import 'services/friends_service.dart';
+import 'services/coin_service.dart';
+import 'services/daily_reward_service.dart';
+import 'services/duel_service.dart';
+import 'utils/app_messenger.dart';
 import 'utils/network_utils.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -32,7 +41,8 @@ void main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.light, // Android: açık ikonlar (koyu arka plan)
+      statusBarBrightness: Brightness.dark, // iOS: açık ikonlar
     ),
   );
   
@@ -51,20 +61,32 @@ void main() async {
   await TicketService().init();
   await StatsService().init();
   await LeaderboardService().init();
+  await PersonalBestService().init();
+  await AchievementService().init();
+  await FriendsService().init();
   await DailyRunService().init();
   await NetworkUtils.syncTime();
   await NotificationService().init();
   await StreakService().init();
   await AnalyticsService().init();
   
+  await CoinService().init();
+  await DailyRewardService().init();
+  await DuelService().init();
   await MobileAds.instance.initialize();
   AdService().init();
   
-  runApp(const DailyGamesApp());
+  // Tanıtım yalnızca gerçekten yeni kullanıcılara (güncelleme alanlara değil)
+  final prefs = await SharedPreferences.getInstance();
+  final isNewUser = StatsService().getStats('daily_run').isEmpty && StreakService().bestStreak == 0;
+  final showOnboarding = !(prefs.getBool(OnboardingScreen.doneKey) ?? false) && isNewUser;
+
+  runApp(DailyGamesApp(showOnboarding: showOnboarding));
 }
 
 class DailyGamesApp extends StatefulWidget {
-  const DailyGamesApp({super.key});
+  final bool showOnboarding;
+  const DailyGamesApp({super.key, this.showOnboarding = false});
 
   @override
   State<DailyGamesApp> createState() => _DailyGamesAppState();
@@ -107,6 +129,11 @@ class _DailyGamesAppState extends State<DailyGamesApp> with WidgetsBindingObserv
           SoundService().updateBgmState();
         }
       });
+      // Arka plandan öne gelindiğinde gün kontrolü ve NTP saat senkronizasyonu
+      StreakService().checkDayGap();
+      NetworkUtils.syncTime().then((_) {
+        StreakService().checkDayGap();
+      });
     }
   }
 
@@ -115,8 +142,9 @@ class _DailyGamesAppState extends State<DailyGamesApp> with WidgetsBindingObserv
     return MaterialApp(
       title: 'Daily Run',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: rootMessengerKey,
       theme: AppTheme.lightTheme,
-      home: const HomeScreen(),
+      home: widget.showOnboarding ? const OnboardingScreen() : const HomeScreen(),
       navigatorObservers: [
         if (AnalyticsService().observer != null) AnalyticsService().observer!,
       ],

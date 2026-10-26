@@ -9,6 +9,7 @@ import '../../services/sound_service.dart';
 import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
+import '../../services/personal_best_service.dart';
 import '../../services/daily_challenge_service.dart';
 import '../../services/language_service.dart';
 
@@ -293,6 +294,16 @@ class _ReactleScreenState extends State<ReactleScreen>
         durationMs: durationMs,
         isWin: true,
       );
+    } else {
+      PersonalBestService().submit(
+        'reactle',
+        LeaderboardService.calculateLeaderboardScore(
+          gameId: 'reactle',
+          isWin: true,
+          score: score,
+          durationMs: durationMs,
+        ),
+      );
     }
   }
 
@@ -523,7 +534,7 @@ class _ReactleScreenState extends State<ReactleScreen>
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () => Navigator.maybePop(context),
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(

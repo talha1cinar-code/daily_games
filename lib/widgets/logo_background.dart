@@ -12,19 +12,20 @@ class _LogoBackgroundState extends State<LogoBackground> with SingleTickerProvid
   late AnimationController _controller;
   
   final List<String> logos = [
-    'assets/images/wordle.png',
-    'assets/images/worldle.png',
-    'assets/images/huedle.png',
-    'assets/images/timele.png',
-    'assets/images/sound.png',
-    'assets/images/rgble.png',
-    'assets/images/reactle.png',
-    'assets/images/nerdle.png',
-    'assets/images/memorle.png',
-    'assets/images/linele.png',
-    'assets/images/fille.png',
-    'assets/images/circle.png',
-    'assets/images/wikitrivia.png',
+    'assets/images/icons/wordle.png',
+    'assets/images/icons/worldle.png',
+    'assets/images/icons/huedle.png',
+    'assets/images/icons/timele.png',
+    'assets/images/icons/sound.png',
+    'assets/images/icons/rgble.png',
+    'assets/images/icons/reactle.png',
+    'assets/images/icons/nerdle.png',
+    'assets/images/icons/memorle.png',
+    'assets/images/icons/wikitrivia.png',
+    'assets/images/icons/quickle.png',
+    'assets/images/icons/slicele.png',
+    'assets/images/icons/stackle.png',
+    'assets/images/icons/mirrorle.png',
   ];
 
   late List<_LogoItem> items;
@@ -84,10 +85,14 @@ class _LogoBackgroundState extends State<LogoBackground> with SingleTickerProvid
                         angle: item.angle + (_controller.value * math.pi * item.spinDirection),
                         child: Opacity(
                           opacity: item.opacity,
-                          child: Image.asset(
-                            item.logoPath,
-                            width: item.size,
-                            height: item.size,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(item.size * 0.24),
+                            child: Image.asset(
+                              item.logoPath,
+                              width: item.size,
+                              height: item.size,
+                              cacheWidth: 112,
+                            ),
                           ),
                         ),
                       ),

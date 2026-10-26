@@ -5,6 +5,11 @@ import 'leaderboard_service.dart';
 import 'stats_service.dart';
 import 'streak_service.dart';
 import 'analytics_service.dart';
+import 'achievement_service.dart';
+import 'personal_best_service.dart';
+import 'daily_challenge_service.dart';
+import 'score_scale.dart';
+import 'coin_service.dart';
 import '../utils/network_utils.dart';
 
 /// Daily Run oturumunu ve ilerlemesini yöneten servis.
@@ -13,8 +18,9 @@ import '../utils/network_utils.dart';
 ///   - Run 1: 00:00 - 16:59
 ///   - Run 2: 17:00 - 23:59
 ///
-/// Her run'da 12 oyun sırayla oynanır, her oyunun skoru kaydedilir,
-/// toplam skor leaderboard'a yazılır.
+/// Her run'da havuzdan tarih+slot seed'iyle seçilen [gamesPerRun] oyun
+/// sırayla oynanır; herkes aynı oyunları aynı sırayla görür. Her oyunun skoru
+/// kaydedilir, toplam skor leaderboard'a yazılır.
 class DailyRunService extends ChangeNotifier {
   static final DailyRunService _instance = DailyRunService._();
   factory DailyRunService() => _instance;
@@ -24,21 +30,47 @@ class DailyRunService extends ChangeNotifier {
 
   static const String _prefsKeyPrefix = 'daily_run_';
 
-  /// Daily Run'daki oyun sırası
-  static const List<String> gameOrder = [
+  static const int gamesPerRun = 7;
+
+  /// Daily Run'a girebilecek oyunlar
+  static const List<String> gamePool = [
     'wordle',
     'wikitrivia',
     'rgble',
     'nerdle',
-    'linele',
     'worldle',
     'sound',
     'memorle',
     'huedle',
-    'fille',
     'timele',
     'reactle',
+    'quickle',
+    'slicele',
+    'stackle',
+    'mirrorle',
+    'anglele',
+    'dropple',
+    'icele',
+    'countle',
+    'balancele',
+    'centerle',
+    'mazele',
+    'echole',
+    'shadowle',
+    'rotatle',
   ];
+
+  /// Belirli bir gün ve slot için oyun sırası.
+  /// Her oyun kendi id'siyle ayrı bir puan alır ve en yüksek 7 seçilir; böylece havuza
+  /// oyun eklemek/çıkarmak (uygulama güncellemesi) diğer oyunların sırasını bozmaz.
+  static List<String> gameOrderFor(String dateKey, int slot) {
+    int rank(String id) => DailyChallengeService.stableHash('run_${dateKey}_${slot}_$id');
+    final sorted = List<String>.from(gamePool)..sort((a, b) => rank(a).compareTo(rank(b)));
+    return sorted.take(gamesPerRun).toList();
+  }
+
+  /// Şu anki run'ın oyun sırası
+  static List<String> get gameOrder => gameOrderFor(_todayKey(), currentRunSlot());
 
   /// Oyun isimlerinin görüntüleme adları
   static const Map<String, String> gameDisplayNames = {
@@ -46,14 +78,26 @@ class DailyRunService extends ChangeNotifier {
     'wikitrivia': 'Wikitrivia',
     'rgble': 'RGBle',
     'nerdle': 'Nerdle',
-    'linele': 'Linele',
     'worldle': 'Worldle',
     'sound': 'Sound',
     'memorle': 'Memorle',
     'huedle': 'Huedle',
-    'fille': 'Fille',
     'timele': 'Timele',
     'reactle': 'Reactle',
+    'quickle': 'Quickle',
+    'slicele': 'Slicele',
+    'stackle': 'Stackle',
+    'mirrorle': 'Mirrorle',
+    'anglele': 'Anglele',
+    'dropple': 'Dropple',
+    'icele': 'Icele',
+    'countle': 'Countle',
+    'balancele': 'Balancele',
+    'centerle': 'Centerle',
+    'mazele': 'Mazele',
+    'echole': 'Echole',
+    'shadowle': 'Shadowle',
+    'rotatle': 'Rotatle',
   };
 
   Future<void> init() async {
@@ -168,17 +212,25 @@ class DailyRunService extends ChangeNotifier {
     } else {
       progress = getProgress();
     }
-    
-    progress.scores[gameId] = score;
+
+    // Oyun bittikten sonra çıkış onayıyla ikinci kez (0 puanla) gelirse yok say
+    if (progress.scores.containsKey(gameId)) return;
+
+    // Run toplamı için 0-100'e normalize; oyun sıralaması için ham puan saklanır
+    progress.scores[gameId] = ScoreScale.normalize(gameId, score);
+    progress.rawScores[gameId] = score;
     progress.durationsMs[gameId] = durationMs;
-    progress.currentGameIndex++;
     progress.isStarted = true;
+    PersonalBestService().submit(gameId, score, announce: false);
+
+    final order = progress.gameOrder;
+    progress.currentGameIndex = order.where(progress.scores.containsKey).length;
 
     final liveSlot = currentRunSlot();
     final liveDateKey = _todayKey();
     bool isExpired = (progress.runSlot != liveSlot) || (progress.dateKey != liveDateKey);
 
-    if (progress.currentGameIndex >= gameOrder.length || isExpired) {
+    if (progress.currentGameIndex >= order.length || isExpired) {
       progress.isCompleted = true;
       await _prefs?.remove('active_run_key');
     }
@@ -190,6 +242,7 @@ class DailyRunService extends ChangeNotifier {
       await _submitScoreForProgress(progress);
       // Seri güncelle
       await StreakService().onDailyRunCompleted();
+      await AchievementService().onDailyRunCompleted(progress.runSlot, progress.scores);
     }
     
     notifyListeners();
@@ -253,10 +306,11 @@ class DailyRunService extends ChangeNotifier {
 
     // Her oyunun bireysel skorunu da kaydet
     for (final entry in progress.scores.entries) {
+      final raw = progress.rawScores[entry.key] ?? entry.value;
       await LeaderboardService().submitScore(
         gameId: entry.key,
-        score: entry.value,
-        isWin: entry.value > 0.0,
+        score: raw,
+        isWin: raw > 0.0,
         durationMs: progress.durationsMs[entry.key],
         dateKeyOverride: progress.dateKey,
       );
@@ -270,11 +324,44 @@ class DailyRunService extends ChangeNotifier {
     await _prefs?.setString(key, jsonEncode(progress.toJson()));
   }
 
+  // ─── Koşu sandığı ──────────────────────────────────────────────
+
+  /// Skora göre sandık ödülü: 20 taban + her 10 puan için 1 coin
+  static int chestReward(DailyRunProgress p) {
+    final total = p.scores.values.fold(0.0, (a, b) => a + b);
+    return 20 + total ~/ 10;
+  }
+
+  String _chestKey(DailyRunProgress p, String suffix) => 'chest_${p.dateKey}_${p.runSlot}_$suffix';
+
+  bool isChestOpened(DailyRunProgress p) => _prefs?.getBool(_chestKey(p, 'open')) ?? false;
+  bool isChestDoubled(DailyRunProgress p) => _prefs?.getBool(_chestKey(p, 'double')) ?? false;
+
+  /// Sandığı açar ve coin verir; aynı run için ikinci kez vermez.
+  Future<int> openChest(DailyRunProgress p) async {
+    if (!p.isCompleted || isChestOpened(p)) return 0;
+    await _prefs?.setBool(_chestKey(p, 'open'), true);
+    final amount = chestReward(p);
+    await CoinService().earn(amount, 'run_chest');
+    return amount;
+  }
+
+  /// Reklam izlenince sandık ödülü bir kez daha verilir.
+  Future<int> doubleChest(DailyRunProgress p) async {
+    if (!isChestOpened(p) || isChestDoubled(p)) return 0;
+    await _prefs?.setBool(_chestKey(p, 'double'), true);
+    final amount = chestReward(p);
+    await CoinService().earn(amount, 'run_chest_ad');
+    return amount;
+  }
+
   /// Sonraki oyunun ID'sini getir (null = tamamlandı)
   String? getNextGameId() {
     final progress = getProgress();
-    if (progress.currentGameIndex >= gameOrder.length) return null;
-    return gameOrder[progress.currentGameIndex];
+    for (final id in progress.gameOrder) {
+      if (!progress.scores.containsKey(id)) return id;
+    }
+    return null;
   }
 
   /// Belirli bir oyunun display name'ini getir
@@ -288,11 +375,27 @@ class DailyRunProgress {
   int runSlot;
   String dateKey;
   int currentGameIndex;
+  /// Normalize (0-100) skorlar — run toplamı bunlardan oluşur
   Map<String, double> scores;
+
+  /// Oyun sıralamasına giden ham puanlar
+  Map<String, double> rawScores;
   Map<String, int> durationsMs;
   bool isCompleted;
   bool isStarted;
   List<String> startedGames;
+
+  /// Kaydedilmiş sıra: run bir kez kaydedildikten sonra güncellemelerde değişmez
+  final List<String>? _savedOrder;
+
+  /// Bu run'ın oyun sırası (kayıtlıysa o, değilse tarih + slot'tan türetilir)
+  List<String> get gameOrder {
+    final saved = _savedOrder?.where(DailyRunService.gamePool.contains).toList();
+    return saved != null && saved.isNotEmpty ? saved : DailyRunService.gameOrderFor(dateKey, runSlot);
+  }
+
+  /// Sıradaki oyunlardan tamamlananların sayısı
+  int get completedCount => gameOrder.where(scores.containsKey).length;
 
   /// Toplam süre (ms)
   int get totalDurationMs => durationsMs.values.fold(0, (a, b) => a + b);
@@ -305,8 +408,12 @@ class DailyRunProgress {
     required this.isCompleted,
     required this.isStarted,
     Map<String, int>? durationsMs,
+    Map<String, double>? rawScores,
     List<String>? startedGames,
-  })  : durationsMs = durationsMs ?? {},
+    List<String>? savedOrder,
+  })  : _savedOrder = savedOrder,
+        durationsMs = durationsMs ?? {},
+        rawScores = rawScores ?? {},
         startedGames = startedGames ?? [];
 
   factory DailyRunProgress.fromJson(Map<String, dynamic> json) {
@@ -318,6 +425,9 @@ class DailyRunProgress {
             (k, v) => MapEntry(k, (v as num).toDouble()),
           ) ??
           {},
+      rawScores: (json['rawScores'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, (v as num).toDouble()),
+          ),
       durationsMs: (json['durationsMs'] as Map<String, dynamic>?)?.map(
             (k, v) => MapEntry(k, (v as num).toInt()),
           ) ??
@@ -328,6 +438,7 @@ class DailyRunProgress {
               ?.map((e) => e as String)
               .toList() ??
           [],
+      savedOrder: (json['gameOrder'] as List<dynamic>?)?.map((e) => e as String).toList(),
     );
   }
 
@@ -336,9 +447,11 @@ class DailyRunProgress {
         'dateKey': dateKey,
         'currentGameIndex': currentGameIndex,
         'scores': scores,
+        'rawScores': rawScores,
         'durationsMs': durationsMs,
         'isCompleted': isCompleted,
         'isStarted': isStarted,
         'startedGames': startedGames,
+        'gameOrder': gameOrder,
       };
 }

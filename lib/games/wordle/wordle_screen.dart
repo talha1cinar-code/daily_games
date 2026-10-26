@@ -7,8 +7,11 @@ import '../../services/daily_challenge_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/ticket_service.dart';
 import '../../services/leaderboard_service.dart';
+import '../../services/personal_best_service.dart';
 import '../../services/app_strings.dart';
 import '../../widgets/game_exit_wrapper.dart';
+import '../../widgets/coin_offer_dialog.dart';
+import '../../services/coin_service.dart';
 import 'wordle_game.dart';
 import 'widgets/wordle_grid.dart';
 import 'widgets/wordle_keyboard.dart';
@@ -25,6 +28,52 @@ class WordleScreen extends StatefulWidget {
 class _WordleScreenState extends State<WordleScreen>
     with TickerProviderStateMixin {
   late WordleGame _game;
+  final Set<int> _hinted = {};
+  static const int _maxHints = 2;
+
+  // İpucu yalnızca bilet modunda; Daily Run sıralamasını coin etkilemez
+  bool get _ticketMode => widget.onGameComplete == null && !widget.isDailyMode;
+
+  /// Henüz yeşil bulunmamış bir harfi coin karşılığı açar.
+  Future<void> _useHint() async {
+    if (_game.isGameOver || _hinted.length >= _maxHints) return;
+    final found = <int>{
+      for (final row in _game.guessStatuses)
+        for (var i = 0; i < row.length; i++)
+          if (row[i] == LetterStatus.correct) i,
+    };
+    final candidates = [
+      for (var i = 0; i < _game.wordLength; i++)
+        if (!found.contains(i) && !_hinted.contains(i)) i,
+    ];
+    if (candidates.isEmpty) return;
+    final ok = await showCoinOffer(
+      context,
+      icon: Icons.lightbulb_rounded,
+      title: AppStrings.hint,
+      description: AppStrings.wordleHintDesc,
+      confirmLabel: AppStrings.hint,
+      price: CoinService.hintPrice,
+      item: 'wordle_hint',
+    );
+    if (!ok || !mounted) return;
+    final pos = candidates.first;
+    final letter = _game.targetWord[pos];
+    setState(() {
+      _hinted.add(pos);
+      _game.keyboardStatuses[letter] = LetterStatus.correct;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.wordleCorrect,
+        content: Text(
+          AppStrings.wordleHintResult(pos + 1, letter),
+          style: GoogleFonts.nunito(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16),
+        ),
+      ),
+    );
+  }
   bool _isLoading = true;
   String _message = '';
   final SoundService _sound = SoundService();
@@ -117,6 +166,17 @@ class _WordleScreenState extends State<WordleScreen>
               maxAttempts: _game.maxAttempts,
               durationMs: durationMs,
               isWin: _game.isWon,
+            );
+          } else {
+            PersonalBestService().submit(
+              'wordle',
+              LeaderboardService.calculateLeaderboardScore(
+                gameId: 'wordle',
+                isWin: _game.isWon,
+                attempts: _game.guesses.length,
+                maxAttempts: _game.maxAttempts,
+                durationMs: durationMs,
+              ),
             );
           }
           
@@ -359,6 +419,12 @@ class _WordleScreenState extends State<WordleScreen>
                       ),
                     ),
                   const Spacer(),
+                  if (_ticketMode && !_game.isGameOver && _hinted.length < _maxHints)
+                    IconButton(
+                      tooltip: AppStrings.hint,
+                      onPressed: _useHint,
+                      icon: const Icon(Icons.lightbulb_rounded, color: Color(0xFFE8B93A)),
+                    ),
                   // Ses butonu
                   GestureDetector(
                     onTap: () {

@@ -3,7 +3,8 @@ import '../../services/language_service.dart';
 
 /// Sound oyununun çekirdek mantığı
 class SoundGame {
-  static const int totalRounds = 5;
+  static const int totalRounds = 4;
+  static const double maxTotal = totalRounds * 10.0;
   static const double maxScorePerRound = 10.0;
   static const double minFreq = 80.0;
   static const double maxFreq = 1200.0;
@@ -16,8 +17,8 @@ class SoundGame {
   bool isGameOver = false;
 
   SoundGame({List<double>? externalFrequencies}) {
-    if (externalFrequencies != null && externalFrequencies.length == totalRounds) {
-      targetFrequencies.addAll(externalFrequencies);
+    if (externalFrequencies != null && externalFrequencies.length >= totalRounds) {
+      targetFrequencies.addAll(externalFrequencies.take(totalRounds));
     } else {
       _generateTargetFrequencies();
     }
@@ -31,7 +32,7 @@ class SoundGame {
   /// Rastgele frekanslar üret (Biletli mod için)
   static List<double> getRandomFrequencies() {
     final random = Random();
-    return List.generate(5, (_) {
+    return List.generate(totalRounds, (_) {
       return minFreq + random.nextDouble() * (maxFreq - minFreq);
     });
   }

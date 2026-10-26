@@ -7,6 +7,7 @@ import '../../services/daily_challenge_service.dart';
 import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
+import '../../services/personal_best_service.dart';
 import 'nerdle_game.dart';
 import '../../services/language_service.dart';
 import '../../services/app_strings.dart';
@@ -114,6 +115,17 @@ class _NerdleScreenState extends State<NerdleScreen>
               maxAttempts: NerdleGame.maxAttempts,
               durationMs: durationMs,
               isWin: _game.isWon,
+            );
+          } else {
+            PersonalBestService().submit(
+              'nerdle',
+              LeaderboardService.calculateLeaderboardScore(
+                gameId: 'nerdle',
+                isWin: _game.isWon,
+                attempts: _game.guesses.length,
+                maxAttempts: NerdleGame.maxAttempts,
+                durationMs: durationMs,
+              ),
             );
           }
           
@@ -378,7 +390,7 @@ class _NerdleScreenState extends State<NerdleScreen>
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () => Navigator.of(context).maybePop(),
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(

@@ -1,5 +1,5 @@
 name: daily_games
-description: "A new Flutter project."
+description: "Daily Run - daily mini puzzle games."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -50,7 +50,7 @@ dependencies:
   firebase_crashlytics: ^4.3.10
   in_app_review: ^2.0.12
   url_launcher: ^6.3.1
-
+  share_plus: ^13.3.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -94,6 +94,9 @@ flutter:
   assets:
     - assets/words/
     - assets/images/
+    - assets/images/icons/
+    - assets/avatars/
+    - assets/banners/
     - assets/sounds/
 
   # An image asset can refer to one or more resolution-specific "variants", see

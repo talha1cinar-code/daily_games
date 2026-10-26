@@ -7,6 +7,7 @@ import '../../services/daily_challenge_service.dart';
 import '../../services/ticket_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/leaderboard_service.dart';
+import '../../services/personal_best_service.dart';
 import 'country.dart';
 import 'worldle_game.dart';
 import '../../services/language_service.dart';
@@ -120,6 +121,17 @@ class _WorldleScreenState extends State<WorldleScreen>
           maxAttempts: WorldleGame.maxAttempts,
           durationMs: durationMs,
           isWin: _game.isWon,
+        );
+      } else {
+        PersonalBestService().submit(
+          'worldle',
+          LeaderboardService.calculateLeaderboardScore(
+            gameId: 'worldle',
+            isWin: _game.isWon,
+            attempts: _game.guesses.length,
+            maxAttempts: WorldleGame.maxAttempts,
+            durationMs: durationMs,
+          ),
         );
       }
     }
@@ -307,7 +319,7 @@ class _WorldleScreenState extends State<WorldleScreen>
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () => Navigator.of(context).maybePop(),
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(

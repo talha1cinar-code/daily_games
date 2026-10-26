@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'daily_run_service.dart';
+import 'avatar_service.dart';
 
 /// Sıralama verisi için model.
 class LeaderboardEntry {
   final String userId;
   final String displayName;
   final String avatar;
+  final String banner;
   final double score;
   final int attempts;
   final int maxAttempts;
@@ -19,6 +21,7 @@ class LeaderboardEntry {
     required this.userId,
     required this.displayName,
     required this.avatar,
+    this.banner = 'none',
     required this.score,
     this.attempts = 0,
     this.maxAttempts = 0,
@@ -31,6 +34,7 @@ class LeaderboardEntry {
       userId: id,
       displayName: map['name'] as String? ?? 'Anonim',
       avatar: map['avatar'] as String? ?? '👤',
+      banner: map['banner'] as String? ?? 'none',
       score: (map['score'] as num?)?.toDouble() ?? 0.0,
       attempts: map['attempts'] as int? ?? 0,
       maxAttempts: map['maxAttempts'] as int? ?? 0,
@@ -42,6 +46,7 @@ class LeaderboardEntry {
   Map<String, dynamic> toMap() => {
         'name': displayName,
         'avatar': avatar,
+        'banner': banner,
         'score': score,
         'attempts': attempts,
         'maxAttempts': maxAttempts,
@@ -63,6 +68,7 @@ class WeeklyLeaderboardEntry {
   final String userId;
   final String displayName;
   final String avatar;
+  final String banner;
   final double totalScore;
   final int daysPlayed;
 
@@ -70,6 +76,7 @@ class WeeklyLeaderboardEntry {
     required this.userId,
     required this.displayName,
     required this.avatar,
+    this.banner = 'none',
     required this.totalScore,
     required this.daysPlayed,
   });
@@ -88,7 +95,8 @@ class LeaderboardService {
   factory LeaderboardService() => _instance;
   LeaderboardService._();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // İlk kullanımda alınır (Firebase başlatılmadan da servis oluşturulabilsin)
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
 
   SharedPreferences? _prefs;
   final Map<String, _CacheEntry<dynamic>> _cache = {};
@@ -97,6 +105,7 @@ class LeaderboardService {
   static const String _userIdKey = 'leaderboard_user_id';
   static const String _displayNameKey = 'leaderboard_display_name';
   static const String _avatarKey = 'leaderboard_avatar';
+  static const String _bannerKey = 'leaderboard_banner';
   // ─── Anonim İsim Havuzları ───────────────────────────────────────
   static const List<String> _adjectives = [
     'Crazy', 'Sleepy', 'Happy', 'Angry', 'Brave',
@@ -144,8 +153,8 @@ class LeaderboardService {
     // Avatar
     String? currentAvatar = _prefs!.getString(_avatarKey);
     if (currentAvatar == null) {
-      final random = Random();
-      currentAvatar = _avatars[random.nextInt(_avatars.length)];
+      final free = AvatarService.freeCharacters;
+      currentAvatar = AvatarService.character(free[Random().nextInt(free.length)]);
       _prefs!.setString(_avatarKey, currentAvatar);
     }
   }
@@ -178,6 +187,22 @@ class LeaderboardService {
   /// Mevcut kullanıcının avatarı.
   String get avatar => _prefs?.getString(_avatarKey) ?? '👤';
 
+  /// Seçili profil banner'ı (BannerStyle.id)
+  String get banner => _prefs?.getString(_bannerKey) ?? 'none';
+
+  /// Banner değişir; sıralamaya bir sonraki skor gönderiminde yansır.
+  Future<void> setBanner(String id) async {
+    await _prefs?.setString(_bannerKey, id);
+  }
+
+  /// Coin ile açılan emoji avatarlar
+  static List<String> get emojiAvatars => _avatars;
+
+  /// Avatar değişir; sıralamaya bir sonraki skor gönderiminde yansır.
+  Future<void> setAvatar(String value) async {
+    await _prefs?.setString(_avatarKey, value);
+  }
+
   // ─── Tarih Yardımcıları ──────────────────────────────────────────
   static String _dateKey([DateTime? date]) {
     final d = date ?? DailyRunService.turkeyNow;
@@ -204,6 +229,7 @@ class LeaderboardService {
         userId: userId,
         displayName: displayName,
         avatar: avatar,
+        banner: banner,
         score: score,
         attempts: attempts,
         maxAttempts: maxAttempts,
@@ -308,7 +334,49 @@ class LeaderboardService {
     }
   }
 
-  /// Kullanıcının sırasını getirir (Cache kullanır). 
+  /// Sıra ve toplam oyuncu sayısı (yüzdelik dilim için). Hata olursa null.
+  Future<({int rank, int total})?> getStanding(String gameId, double myScore, int? myDurationMs, [String? date]) async {
+    final dateKey = date ?? _dateKey();
+    try {
+      final rank = await getUserRank(gameId, myScore, myDurationMs, dateKey);
+      if (rank == null) return null;
+      final count = await _firestore
+          .collection('leaderboards')
+          .doc('${gameId}_$dateKey')
+          .collection('entries')
+          .count()
+          .get();
+      final total = count.count ?? 0;
+      return (rank: rank, total: total < rank ? rank : total);
+    } catch (e) {
+      debugPrint('LeaderboardService getStanding Error: $e');
+      return null;
+    }
+  }
+
+  /// Belirli kullanıcıların günlük kayıtları (arkadaş sıralaması). Firestore
+  /// `whereIn` sınırı nedeniyle 30'arlı gruplar halinde sorgulanır.
+  Future<List<LeaderboardEntry>> getDailyEntriesForUsers(String gameId, List<String> userIds, [String? date]) async {
+    final dateKey = date ?? _dateKey();
+    final result = <LeaderboardEntry>[];
+    try {
+      final ref = _firestore.collection('leaderboards').doc('${gameId}_$dateKey').collection('entries');
+      for (var i = 0; i < userIds.length; i += 30) {
+        final chunk = userIds.sublist(i, min(i + 30, userIds.length));
+        final snap = await ref.where(FieldPath.documentId, whereIn: chunk).get();
+        result.addAll(snap.docs.map((d) => LeaderboardEntry.fromMap(d.id, d.data())));
+      }
+    } catch (e) {
+      debugPrint('LeaderboardService getDailyEntriesForUsers Error: $e');
+    }
+    result.sort((a, b) {
+      final c = b.score.compareTo(a.score);
+      return c != 0 ? c : (a.durationMs ?? 0).compareTo(b.durationMs ?? 0);
+    });
+    return result;
+  }
+
+  /// Kullanıcının sırasını getirir (Cache kullanır).
   /// Geçmiş tarihler için SharedPreferences'a kalıcı olarak yazar.
   Future<int?> getCachedUserRank(String gameId, double myScore, int? myDurationMs, String date) async {
     if (_prefs == null) return null;
@@ -387,6 +455,7 @@ class LeaderboardService {
           userId: doc.id,
           displayName: data['name'] as String? ?? 'Anonim',
           avatar: data['avatar'] as String? ?? '👤',
+          banner: data['banner'] as String? ?? 'none',
           totalScore: (data['totalScore'] as num?)?.toDouble() ?? 0.0,
           daysPlayed: data['daysPlayed'] as int? ?? 0,
         );
@@ -449,6 +518,7 @@ class LeaderboardService {
           userId: doc.id,
           displayName: data['name'] as String? ?? 'Anonim',
           avatar: data['avatar'] as String? ?? '👤',
+          banner: data['banner'] as String? ?? 'none',
           totalScore: (data['totalScore'] as num?)?.toDouble() ?? 0.0,
           daysPlayed: data['daysPlayed'] as int? ?? 0,
         );
@@ -479,6 +549,7 @@ class LeaderboardService {
           .set({
         'name': displayName,
         'avatar': avatar,
+        'banner': banner,
         'totalScore': FieldValue.increment(runScore),
         'daysPlayed': FieldValue.increment(1),
         'lastUpdated': FieldValue.serverTimestamp(),
@@ -511,7 +582,6 @@ class LeaderboardService {
   /// Wordle/Nerdle/Worldle: Az deneme + kısa süre = yüksek skor
   /// Wikitrivia: Yüksek skor + kısa süre
   /// RGBle/Sound/Timele: Doğrudan score değeri
-  /// Linele: Kısa süre = yüksek skor
   static double calculateLeaderboardScore({
     required String gameId,
     required bool isWin,
@@ -542,18 +612,25 @@ class LeaderboardService {
       case 'rgble':
       case 'sound':
       case 'timele':
-      case 'fille':
       case 'huedle':
       case 'memorle':
       case 'reactle':
+      case 'quickle':
+      case 'slicele':
+      case 'stackle':
+      case 'mirrorle':
+      case 'anglele':
+      case 'dropple':
+      case 'icele':
+      case 'countle':
+      case 'balancele':
+      case 'centerle':
+      case 'mazele':
+      case 'echole':
+      case 'shadowle':
+      case 'rotatle':
         // Doğrudan score değeri (0-100 arası)
         return score;
-
-      case 'linele':
-        if (!isWin) return 0.0;
-        // Kısa süre = yüksek skor (max 5 dakika = 300000ms)
-        if (durationMs == null) return 50.0;
-        return ((300000 - durationMs.clamp(0, 300000)) / 300000 * 100);
 
       default:
         return score;

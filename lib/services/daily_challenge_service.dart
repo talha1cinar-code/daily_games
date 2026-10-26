@@ -156,27 +156,35 @@ class DailyChallengeService {
     return worldle?['targetCountryCode'] as String?;
   }
 
-  /// Linele: Günün Linele seed'i
-  /// Returns: `int?` (örn: 123456)
-  Future<int?> getLineleSeed() async {
-    final data = await _getTodayData();
-    if (data == null) return null;
-    final linele = data['linele'] as Map<String, dynamic>?;
-    return linele?['seed'] as int?;
-  }
-
   // ═══════════════════════════════════════════════════════════════════
   // ─── Deterministik Seed Motoru ────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════
+
+  /// Ayarlıysa tüm seed'ler tarih yerine buradan türetilir (düello turları).
+  static int? seedOverride;
 
   /// Merkezi seed üreteci.
   /// Tarih (TSİ) + Slot (1/2) + GameId girdileriyle
   /// tüm kullanıcılara %100 aynı seed üretir.
   static int getDailyRunSeed(String gameId) {
+    // Düello turu: iki rakip de aynı (düelloya özel) bulmacayı oynar
+    final override = seedOverride;
+    if (override != null) return override ^ stableHash(gameId);
     final t = DailyRunService.turkeyNow;
     final slot = DailyRunService.currentRunSlot();
     final dateInt = t.year * 10000 + t.month * 100 + t.day;
-    return dateInt ^ (slot * 99991) ^ gameId.hashCode;
+    return dateInt ^ (slot * 99991) ^ stableHash(gameId);
+  }
+
+  /// FNV-1a (32 bit). String.hashCode Dart sürümleri ve platformlar arasında
+  /// aynı kalmayabilir; herkesin aynı bulmacayı görmesi için sabit hash şart.
+  static int stableHash(String s) {
+    var h = 0x811c9dc5;
+    for (final unit in s.codeUnits) {
+      h ^= unit;
+      h = (h * 0x01000193) & 0xFFFFFFFF;
+    }
+    return h;
   }
 
   // ─── Oyun Bazlı Seed Tabanlı İçerik Üretimi ─────────────────────
@@ -241,18 +249,6 @@ class DailyChallengeService {
     return rng.nextInt(countryCount);
   }
 
-  /// Linele: Seed döndürür.
-  static int getSeededLineleSeed() {
-    return getDailyRunSeed('linele');
-  }
-
-  /// Fille: Seed tabanlı bardak boyu (0.35 – 0.72).
-  static double getSeededFilleGlassHeight() {
-    final seed = getDailyRunSeed('fille');
-    final rng = Random(seed);
-    return 0.35 + rng.nextDouble() * 0.37;
-  }
-
   /// Memorle: Seed döndürür (Random(seed) ile tüm seviyeler deterministik).
   static int getSeededMemorleSeed() {
     return getDailyRunSeed('memorle');
@@ -271,6 +267,18 @@ class DailyChallengeService {
       return 1000 + rng.nextInt(3001); // 1000 - 4000 ms
     });
   }
+
+  /// Quickle: Seed döndürür (soru dizisi bu seed'den üretilir).
+  static int getSeededQuickleSeed() {
+    return getDailyRunSeed('quickle');
+  }
+
+  /// Genel seed: yeni oyunlar oyun başına metod yerine bunu kullanır
+  static int getSeededSeed(String gameId) => getDailyRunSeed(gameId);
+
+  static int getSeededSliceleSeed() => getDailyRunSeed('slicele');
+  static int getSeededStackleSeed() => getDailyRunSeed('stackle');
+  static int getSeededMirrorleSeed() => getDailyRunSeed('mirrorle');
 
   /// Wikitrivia: Seed tabanlı olay shuffle.
   /// [allEvents] olay listesi dışarıdan geçilir.

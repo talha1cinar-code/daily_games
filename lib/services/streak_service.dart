@@ -5,13 +5,18 @@ import 'package:in_app_review/in_app_review.dart';
 import 'daily_run_service.dart';
 import 'notification_service.dart';
 import 'analytics_service.dart';
+import 'achievement_service.dart';
 
 /// Duolingo benzeri seri (streak) sistemi.
 ///
-/// - Kullanıcı günde en az 1 Daily Run tamamlarsa seri artar.
-/// - 1 gün atlarsa önce donma hakkı (freeze) kullanılır.
-/// - Donma hakkı bittiyse seri sıfırlanır.
-/// - Seri sıfırlandıktan sonra 7 gün içinde reklam izleyerek geri getirilebilir.
+/// - Günde en az 1 oyun bitirmek (Daily Run ya da biletli) seriyi uzatır.
+/// - Bir gün kaçırılırsa, o gün için 1 donma hakkı harcanır ve seri korunur.
+///   Donmuş günler seriyi artırmaz ama bozmaz.
+/// - Kaçırılan gün sayısı donma hakkından fazlaysa seri sıfırlanır; sıfırlandıktan
+///   sonra [restoreWindowDays] gün içinde reklam izleyerek geri getirilebilir.
+/// - En fazla [maxFreezes] donma hakkı taşınır; her 7 günlük seride +1 kazanılır.
+///
+/// Tüm günler Türkiye saatine (TSİ) göredir.
 class StreakService extends ChangeNotifier {
   static final StreakService _instance = StreakService._internal();
   factory StreakService() => _instance;
@@ -19,228 +24,264 @@ class StreakService extends ChangeNotifier {
 
   SharedPreferences? _prefs;
 
-  static const String _key = 'streak_data_v2';
+  static const String _key = 'streak_data_v3';
+  static const String _legacyKey = 'streak_data_v2';
 
-  // Varsayılan donma hakkı
-  static const int defaultFreezeCount = 5;
-
-  // Seri geri getirme penceresi (gün)
+  static const int maxFreezes = 2;
+  static const int startingFreezes = 1;
+  static const int freezeEveryDays = 7;
   static const int restoreWindowDays = 2;
+  static const int _historyDays = 60;
 
-  // ─── Durum değişkenleri ────────────────────────────────────────
+  /// Kutlama ekranında özel mesaj gösterilen seri günleri
+  static const List<int> milestones = [3, 7, 14, 30, 50, 100, 150, 200, 365];
+
+  // ─── Durum ─────────────────────────────────────────────────────
   int _currentStreak = 0;
   int _bestStreak = 0;
-  int _freezeCount = defaultFreezeCount;
-  String _lastPlayedDate = ''; // Son oynanan gün (yyyy-MM-dd)
-  
-  // Seri sıfırlandıysa geri getirme bilgileri
-  int _lostStreak = 0; // Kaybedilen seri değeri
-  String _lostDate = ''; // Serinin kaybolduğu tarih
-  bool _restored = false; // Bu kayıp zaten geri getirildi mi
-  bool _restorePromptShown = false; // İlk girişte serini kurtar penceresi gösterildi mi
+  int _freezeCount = startingFreezes;
+
+  /// Seriye sayılan son gün. Donma hakkı harcanınca dünün tarihine çekilir ki
+  /// bir sonraki oyun seriyi kaldığı yerden uzatsın.
+  String _lastPlayedDate = '';
+
+  /// Donma hakkının en son devreye girdiği gün (geri dönüş günü)
+  String _lastFreezeDate = '';
+
+  /// En son 7 günlük ödülle donma hakkı kazanılan gün
+  String _freezeEarnedDate = '';
+
+  /// Kutlama ekranının en son gösterildiği gün
+  String _celebratedDate = '';
+
+  final List<String> _activeDays = [];
+  final List<String> _frozenDays = [];
+
+  /// Oyun bitirilen saatler (hatırlatma saatini kişiselleştirmek için)
+  final List<int> _activityHours = [];
+
+  int _lostStreak = 0;
+  String _lostDate = '';
+  bool _restored = false;
+  bool _restorePromptShown = false;
 
   // ─── Getter'lar ────────────────────────────────────────────────
   int get currentStreak => _currentStreak;
   int get bestStreak => _bestStreak;
   int get freezeCount => _freezeCount;
   String get lastPlayedDate => _lastPlayedDate;
+  String get lastFreezeDate => _lastFreezeDate;
   int get lostStreak => _lostStreak;
+  bool get isFreezeAvailable => _freezeCount > 0;
+  Set<String> get activeDays => _activeDays.toSet();
+  Set<String> get frozenDays => _frozenDays.toSet();
+
+  /// Bugün oyun bitirilip seri uzatıldı mı?
+  bool get isPlayedToday => _lastPlayedDate == todayKey() && _activeDays.contains(todayKey());
+
+  /// Bugün donma hakkı kazanıldı mı (7 günlük ödül)?
+  bool get earnedFreezeToday => _freezeEarnedDate == todayKey();
+
+  // Tamamlama ekranı uyumluluğu
+  bool get lastRunExtendedStreak => isPlayedToday;
+  bool get lastRunEarnedFreeze => earnedFreezeToday;
+
+  /// Donma hakkı bugün devreye girdiyse ve henüz oynanmadıysa: seri "buz" görünümünde
+  bool get isFrozenToday => _currentStreak > 0 && !isPlayedToday && _lastFreezeDate == todayKey();
+
+  /// Bugün seri uzadı ama kutlama henüz gösterilmedi
+  bool get shouldCelebrate => isPlayedToday && _celebratedDate != todayKey() && _currentStreak > 0;
+
+  /// Kişinin genelde oynadığı saat (medyan, 10-20 arası); veri yoksa 19
+  int get preferredHour {
+    if (_activityHours.length < 3) return 19;
+    final sorted = [..._activityHours]..sort();
+    return sorted[sorted.length ~/ 2].clamp(10, 20);
+  }
+
   bool get canRestoreStreak {
-    if (_lostStreak <= 0 || _restored) return false;
-    if (_lostDate.isEmpty) return false;
-    // Mevcut seri eski kaybedilen seriyi yakaladıysa veya geçtiyse kurtarma seçeneği kaybolur
+    if (_lostStreak <= 0 || _restored || _lostDate.isEmpty) return false;
     if (_currentStreak >= _lostStreak) return false;
-    
     final lostDay = _parseDate(_lostDate);
     if (lostDay == null) return false;
-    
-    final today = _todayDate();
-    final diff = today.difference(lostDay).inDays;
-    return diff <= restoreWindowDays;
+    return _todayDate().difference(lostDay).inDays <= restoreWindowDays;
   }
 
-  /// Seri sıfırlandıktan sonraki ilk girişte miyiz kontrolü
   bool get shouldShowRestorePrompt => canRestoreStreak && !_restorePromptShown;
 
-  /// İlk giriş penceresinin gösterildiğini işaretler
   Future<void> markRestorePromptShown() async {
-    if (!_restorePromptShown) {
-      _restorePromptShown = true;
-      await _save();
-    }
+    if (_restorePromptShown) return;
+    _restorePromptShown = true;
+    await _save();
   }
 
-  bool get isFreezeAvailable => _freezeCount > 0;
-  
-  /// Bugün henüz oynanmadıysa ve donma hakkı varsa seri donmuş (koruma altında) sayılır.
-  bool get isFrozenToday {
-    if (_currentStreak == 0) return false;
-    final today = _todayKey();
-    return _lastPlayedDate != today && _freezeCount > 0;
+  Future<void> markCelebrated() async {
+    _celebratedDate = todayKey();
+    await _save(reschedule: false);
   }
 
-  // ─── Init ──────────────────────────────────────────────────────
+  // ─── Init / kayıt ──────────────────────────────────────────────
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     _load();
-    // Her açılışta gün kontrolü yap
-    _checkDayGap();
-    // Seri bildirimlerini senkronize et
+    await checkDayGap();
     await updateStreakNotifications();
   }
 
   void _load() {
-    final jsonStr = _prefs?.getString(_key);
-    if (jsonStr == null) return;
-    
+    final raw = _prefs?.getString(_key) ?? _prefs?.getString(_legacyKey);
+    if (raw == null) return;
     try {
-      final data = jsonDecode(jsonStr) as Map<String, dynamic>;
-      _currentStreak = data['currentStreak'] as int? ?? 0;
-      _bestStreak = data['bestStreak'] as int? ?? 0;
-      _freezeCount = data['freezeCount'] as int? ?? defaultFreezeCount;
-      if (_freezeCount > 5) _freezeCount = 5;
-      _lastPlayedDate = data['lastPlayedDate'] as String? ?? '';
-      _lostStreak = data['lostStreak'] as int? ?? 0;
-      _lostDate = data['lostDate'] as String? ?? '';
-      _restored = data['restored'] as bool? ?? false;
-      _restorePromptShown = data['restorePromptShown'] as bool? ?? false;
+      final d = jsonDecode(raw) as Map<String, dynamic>;
+      List<String> strings(String k) => (d[k] as List<dynamic>? ?? []).map((e) => e as String).toList();
+      _currentStreak = d['currentStreak'] as int? ?? 0;
+      _bestStreak = d['bestStreak'] as int? ?? 0;
+      // Eski sürümde 5'e kadar bedava hak vardı; yeni üst sınıra çekilir
+      _freezeCount = (d['freezeCount'] as int? ?? startingFreezes).clamp(0, maxFreezes);
+      _lastPlayedDate = d['lastPlayedDate'] as String? ?? '';
+      _lastFreezeDate = d['lastFreezeDate'] as String? ?? '';
+      _freezeEarnedDate = d['freezeEarnedDate'] as String? ?? '';
+      _celebratedDate = d['celebratedDate'] as String? ?? '';
+      _activeDays
+        ..clear()
+        ..addAll(strings('activeDays'));
+      _frozenDays
+        ..clear()
+        ..addAll(strings('frozenDays'));
+      _activityHours
+        ..clear()
+        ..addAll((d['activityHours'] as List<dynamic>? ?? []).map((e) => e as int));
+      _lostStreak = d['lostStreak'] as int? ?? 0;
+      _lostDate = d['lostDate'] as String? ?? '';
+      _restored = d['restored'] as bool? ?? false;
+      _restorePromptShown = d['restorePromptShown'] as bool? ?? false;
+      // v2'den geçişte takvim boş gelir; son oynanan günü işaretle
+      if (_activeDays.isEmpty && _lastPlayedDate.isNotEmpty && _currentStreak > 0) {
+        _activeDays.add(_lastPlayedDate);
+      }
     } catch (_) {}
   }
 
-  Future<void> _save() async {
-    final data = {
-      'currentStreak': _currentStreak,
-      'bestStreak': _bestStreak,
-      'freezeCount': _freezeCount,
-      'lastPlayedDate': _lastPlayedDate,
-      'lostStreak': _lostStreak,
-      'lostDate': _lostDate,
-      'restored': _restored,
-      'restorePromptShown': _restorePromptShown,
-    };
-    await _prefs?.setString(_key, jsonEncode(data));
-    
-    // Seri bildirimlerini güncelle
-    await updateStreakNotifications();
-    
+  Future<void> _save({bool reschedule = true}) async {
+    void trim(List<String> l) {
+      if (l.length > _historyDays) l.removeRange(0, l.length - _historyDays);
+    }
+
+    trim(_activeDays);
+    trim(_frozenDays);
+    if (_activityHours.length > 14) _activityHours.removeRange(0, _activityHours.length - 14);
+
+    await _prefs?.setString(
+      _key,
+      jsonEncode({
+        'currentStreak': _currentStreak,
+        'bestStreak': _bestStreak,
+        'freezeCount': _freezeCount,
+        'lastPlayedDate': _lastPlayedDate,
+        'lastFreezeDate': _lastFreezeDate,
+        'freezeEarnedDate': _freezeEarnedDate,
+        'celebratedDate': _celebratedDate,
+        'activeDays': _activeDays,
+        'frozenDays': _frozenDays,
+        'activityHours': _activityHours,
+        'lostStreak': _lostStreak,
+        'lostDate': _lostDate,
+        'restored': _restored,
+        'restorePromptShown': _restorePromptShown,
+      }),
+    );
+    if (reschedule) await updateStreakNotifications();
     notifyListeners();
   }
 
-  /// Seri bildirimlerini güncel duruma göre senkronize eder
   Future<void> updateStreakNotifications() async {
-    final isPlayed = _lastPlayedDate == _todayKey();
     await NotificationService().scheduleStreakNotifications(
       currentStreak: _currentStreak,
       freezeCount: _freezeCount,
-      isPlayedToday: isPlayed,
+      isPlayedToday: isPlayedToday,
+      preferredHour: preferredHour,
+      canRestore: canRestoreStreak,
+      lostStreak: _lostStreak,
     );
   }
 
-  // ─── Gün hesaplama ─────────────────────────────────────────────
+  // ─── Tarih yardımcıları ────────────────────────────────────────
   static DateTime _todayDate() {
     final now = DailyRunService.turkeyNow;
-    return DateTime(now.year, now.month, now.day);
+    return DateTime.utc(now.year, now.month, now.day);
   }
 
-  static String _todayKey() {
-    final now = DailyRunService.turkeyNow;
-    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-  }
+  static String keyOf(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-  static DateTime? _parseDate(String dateStr) {
+  static String todayKey() => keyOf(_todayDate());
+
+  static DateTime? _parseDate(String s) {
+    final p = s.split('-');
+    if (p.length != 3) return null;
     try {
-      final parts = dateStr.split('-');
-      if (parts.length != 3) return null;
-      return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+      return DateTime.utc(int.parse(p[0]), int.parse(p[1]), int.parse(p[2]));
     } catch (_) {
       return null;
     }
   }
 
-  // ─── Gün boşluğu kontrolü ─────────────────────────────────────
-  /// Uygulama her açıldığında çalışır.
-  /// Son oynanan gün ile bugün arasındaki farkı kontrol eder.
-  void _checkDayGap() {
+  // ─── Gün boşluğu ───────────────────────────────────────────────
+  /// Açılışta, arka plandan dönüşte ve oyun bitince çalışır. Kaçırılan günler
+  /// için donma hakkı harcar ya da seriyi sıfırlar.
+  Future<void> checkDayGap() async {
     if (_lastPlayedDate.isEmpty || _currentStreak == 0) return;
-
-    final lastPlayed = _parseDate(_lastPlayedDate);
-    if (lastPlayed == null) return;
-
+    final last = _parseDate(_lastPlayedDate);
+    if (last == null) return;
     final today = _todayDate();
-    final diff = today.difference(lastPlayed).inDays;
+    final missed = today.difference(last).inDays - 1;
+    if (missed <= 0) return;
 
-    if (diff <= 1) {
-      // Bugün veya dün oynanmış, seri güvende
-      return;
-    }
-
-    // Atlanan gün sayısı
-    final missedDays = diff - 1;
-
-    if (missedDays <= _freezeCount) {
-      // Donma hakları ile kurtarılabilir
-      _freezeCount -= missedDays;
-      // lastPlayedDate'i dünle güncelle ki bugün oynandığında seri artsın
-      final yesterday = today.subtract(const Duration(days: 1));
-      _lastPlayedDate = '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
-      _save();
+    if (missed <= _freezeCount) {
+      _freezeCount -= missed;
+      for (var i = 1; i <= missed; i++) {
+        _frozenDays.add(keyOf(last.add(Duration(days: i))));
+      }
+      _lastFreezeDate = todayKey();
+      _lastPlayedDate = keyOf(today.subtract(const Duration(days: 1)));
+      AnalyticsService().logCustomEvent('streak_freeze_used', {'count': missed, 'streak': _currentStreak});
     } else {
-      // Seri kaybedildi
       _lostStreak = _currentStreak;
-      _lostDate = _todayKey();
+      _lostDate = todayKey();
       _restored = false;
-      _restorePromptShown = false; // Yeni kayıp: ilk girişte kullanıcıya gösterilecek
+      _restorePromptShown = false;
       _currentStreak = 0;
-      _freezeCount = defaultFreezeCount; // Freeze'leri sıfırla
       _lastPlayedDate = '';
-      _save();
+      _lastFreezeDate = '';
+      AnalyticsService().logCustomEvent('streak_lost', {'streak': _lostStreak});
     }
+    await _save();
   }
 
-  // ─── Daily Run tamamlandığında çağır ───────────────────────────
-  /// Kullanıcı bir Daily Run tamamladığında bu metod çağrılır.
-  /// Gün başına 1 kez seriyi artırır.
-  Future<void> onDailyRunCompleted() async {
-    final today = _todayKey();
-
+  // ─── Oyun bitirme ──────────────────────────────────────────────
+  /// Herhangi bir oyun bitince çağrılır. Gün başına bir kez seriyi uzatır.
+  Future<void> recordActivity() async {
+    await checkDayGap();
+    final today = todayKey();
+    _activityHours.add(DailyRunService.turkeyNow.hour);
     if (_lastPlayedDate == today) {
-      // Bugün zaten oynanmış (sabah/akşam farketmez), seri zaten artmış
+      await _save(reschedule: false);
       return;
     }
 
-    final lastPlayed = _parseDate(_lastPlayedDate);
-    final todayDate = _todayDate();
-
-    if (lastPlayed != null) {
-      final diff = todayDate.difference(lastPlayed).inDays;
-      
-      if (diff == 1) {
-        // Ardışık gün, seri devam ediyor
-        _currentStreak++;
-        if (_currentStreak % 5 == 0) {
-          if (_freezeCount < 5) {
-            _freezeCount++;
-          }
-        }
-      } else if (diff == 0) {
-        // Aynı gün (zaten yukarıda yakalandı ama safety check)
-        return;
-      } else {
-        // Gün atlanmış - _checkDayGap zaten handle etti ama fallback
-        _currentStreak = 1;
-      }
-    } else {
-      // İlk kez oynuyor
-      _currentStreak = 1;
-    }
-
+    final last = _parseDate(_lastPlayedDate);
+    final continues = last != null && _todayDate().difference(last).inDays == 1;
+    _currentStreak = continues ? _currentStreak + 1 : 1;
     _lastPlayedDate = today;
-    
-    if (_currentStreak > _bestStreak) {
-      _bestStreak = _currentStreak;
+    _lastFreezeDate = '';
+    if (!_activeDays.contains(today)) _activeDays.add(today);
+    if (_currentStreak > _bestStreak) _bestStreak = _currentStreak;
+
+    if (_currentStreak % freezeEveryDays == 0 && _freezeCount < maxFreezes) {
+      _freezeCount++;
+      _freezeEarnedDate = today;
     }
 
-    // Eğer kullanıcı mevcut serisini restore edebileceği eski serisine eşitledi veya daha fazla yaptıysa bu seçenek kaybolur
     if (_lostStreak > 0 && _currentStreak >= _lostStreak) {
       _lostStreak = 0;
       _lostDate = '';
@@ -248,45 +289,37 @@ class StreakService extends ChangeNotifier {
     }
 
     AnalyticsService().logStreakAchieved(_currentStreak);
-
+    AchievementService().onStreak(_currentStreak);
     if (_currentStreak == 7) {
-      final InAppReview inAppReview = InAppReview.instance;
-      if (await inAppReview.isAvailable()) {
-        inAppReview.requestReview();
-      }
+      final review = InAppReview.instance;
+      if (await review.isAvailable()) review.requestReview();
     }
-
     await _save();
   }
 
-  // ─── Seri geri getirme (reklam ile) ────────────────────────────
-  /// Reklam izlendikten sonra seriyi geri getirir.
+  /// Geriye dönük uyumluluk: Daily Run bitince de etkinlik sayılır.
+  Future<void> onDailyRunCompleted() => recordActivity();
+
+  // ─── Geri getirme ve donma hakkı ───────────────────────────────
   Future<bool> restoreStreakWithAd() async {
     if (!canRestoreStreak) return false;
-
     _currentStreak = _lostStreak;
     _lostStreak = 0;
     _lostDate = '';
     _restored = true;
     _restorePromptShown = false;
-    _freezeCount = defaultFreezeCount; // Freeze'leri de yenile
-    
-    // lastPlayedDate'i dün olarak ayarla ki bugün oynandığında +1 olsun
-    final yesterday = _todayDate().subtract(const Duration(days: 1));
-    _lastPlayedDate = '${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}';
-    
-    if (_currentStreak > _bestStreak) {
-      _bestStreak = _currentStreak;
-    }
-
+    _lastFreezeDate = '';
+    _lastPlayedDate = keyOf(_todayDate().subtract(const Duration(days: 1)));
+    if (_currentStreak > _bestStreak) _bestStreak = _currentStreak;
     await _save();
     return true;
   }
 
-  // ─── Donma hakkı ekleme (ödül olarak) ──────────────────────────
-  /// Ekstra donma hakkı ekler (reklam izleme, ödül vs.)
-  Future<void> addFreeze([int count = 1]) async {
-    _freezeCount += count;
+  /// Donma hakkı ekler (mağaza vb.). Üst sınırdaysa false döner.
+  Future<bool> addFreeze([int count = 1]) async {
+    if (_freezeCount >= maxFreezes) return false;
+    _freezeCount = (_freezeCount + count).clamp(0, maxFreezes);
     await _save();
+    return true;
   }
 }

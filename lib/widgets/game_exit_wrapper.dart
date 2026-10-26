@@ -31,7 +31,10 @@ class _GameExitWrapperState extends State<GameExitWrapper> {
       canPop: _canPop,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        final shouldPop = await showExitConfirmDialog(context);
+        final shouldPop = await showExitConfirmDialog(
+          context,
+          isDailyRun: widget.onGameComplete != null,
+        );
         if (shouldPop && mounted) {
           if (widget.onGameComplete != null) {
             widget.onGameComplete!(0, 0); // Daily Run'da 0 puan, 0 süre

@@ -1,22 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../theme/app_theme.dart';
 import '../models/game_model.dart';
+import '../games/game_registry.dart';
 import '../widgets/game_card.dart';
-import '../games/wordle/wordle_screen.dart';
-import '../games/wikitrivia/wikitrivia_screen.dart';
-import '../games/nerdle/nerdle_screen.dart';
-import '../games/worldle/worldle_screen.dart';
-import '../games/rgble/rgble_screen.dart';
-import '../games/sound/sound_screen.dart';
-import '../games/timele/timele_screen.dart';
-import '../games/linele/linele_screen.dart';
-import '../games/huedle/huedle_screen.dart';
-import '../games/fille/fille_screen.dart';
-import '../games/memorle/memorle_screen.dart';
-import '../games/reactle/reactle_screen.dart';
 import '../widgets/game_details_bottom_sheet.dart';
 import '../services/sound_service.dart';
+import '../services/personal_best_service.dart';
+import '../widgets/streak_celebration.dart';
+import '../widgets/coin_badge.dart';
 import '../services/app_strings.dart';
 import '../widgets/logo_background.dart';
 
@@ -71,32 +62,7 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
 
   void _onGameTap(GameModel game) {
     GameDetailsBottomSheet.show(context, game, (isDailyMode) async {
-      Widget? screen;
-      if (game.routeName == '/wordle') {
-        screen = WordleScreen(isDailyMode: isDailyMode);
-      } else if (game.routeName == '/wikitrivia') {
-        screen = WikitriviaScreen(isDailyMode: isDailyMode);
-      } else if (game.routeName == '/nerdle') {
-        screen = NerdleScreen(isDailyMode: isDailyMode);
-      } else if (game.routeName == '/worldle') {
-        screen = WorldleScreen(isDailyMode: isDailyMode);
-      } else if (game.routeName == '/rgble') {
-        screen = RgbleScreen(isDailyMode: isDailyMode);
-      } else if (game.routeName == '/sound') {
-        screen = SoundScreen(isDailyMode: isDailyMode);
-      } else if (game.routeName == '/timele') {
-        screen = TimeleScreen(isDailyMode: isDailyMode);
-      } else if (game.routeName == '/linele') {
-        screen = LineleScreen(isDailyMode: isDailyMode);
-      } else if (game.routeName == '/huedle') {
-        screen = HuedleScreen(isDailyMode: isDailyMode);
-      } else if (game.routeName == '/fille') {
-        screen = FilleScreen(isDailyMode: isDailyMode);
-      } else if (game.routeName == '/memorle') {
-        screen = MemorleScreen(isDailyMode: isDailyMode);
-      } else if (game.routeName == '/reactle') {
-        screen = ReactleScreen(isDailyMode: isDailyMode);
-      }
+      final screen = buildGameScreen(game.id, isDailyMode: isDailyMode);
 
       if (screen != null) {
         // Oyun açılırken müziği durdur
@@ -104,7 +70,7 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
         
         await Navigator.of(context).push(
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => screen!,
+            pageBuilder: (context, animation, secondaryAnimation) => screen,
             transitionDuration: Duration.zero,
             reverseTransitionDuration: Duration.zero,
           ),
@@ -113,9 +79,50 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
         // Oyundan çıkınca müziği devam ettir (eğer açıksa)
         if (mounted) {
           SoundService().exitMiniGame();
+          setState(() {}); // kartlardaki rekor rozetleri güncellensin
+          await maybeShowStreakCelebration(context);
+          if (!mounted) return;
+          _announceResult(game);
+          // "Bir tur daha" için detay sayfasını tekrar aç
+          _onGameTap(game);
         }
       }
     });
+  }
+
+  void _announceResult(GameModel game) {
+    final r = PersonalBestService().takeLastResult();
+    if (r == null || r.gameId != game.id) return;
+    final score = r.score.toStringAsFixed(0);
+    final String text;
+    if (r.isNewBest) {
+      SoundService().playWin();
+      text = AppStrings.newPersonalBest(score, r.previousBest!.toStringAsFixed(0));
+    } else if (r.isFirst) {
+      text = AppStrings.firstScore(score);
+    } else {
+      text = AppStrings.scoreVsBest(score, r.previousBest!.toStringAsFixed(0));
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(r.isNewBest ? Icons.emoji_events_rounded : Icons.insights_rounded,
+                color: r.isNewBest ? const Color(0xFFFFD54F) : Colors.white70),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(text, style: GoogleFonts.nunito(fontWeight: FontWeight.w800, color: Colors.white)),
+            ),
+            const CoinIcon(size: 18),
+            const SizedBox(width: 4),
+            Text('+${r.coins}', style: GoogleFonts.nunito(fontWeight: FontWeight.w900, color: const Color(0xFFFFC233))),
+          ],
+        ),
+        backgroundColor: const Color(0xFF2A2340),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    );
   }
 
   @override
@@ -124,15 +131,10 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
 
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF121212),
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF5E35B1), // Deep purple top
-            Color(0xFF121212), // Dark background bottom
-          ],
-          stops: [0.0, 0.6],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2E0854), Color(0xFF0F3460), Color(0xFF16213E)],
         ),
       ),
       child: Scaffold(
@@ -154,20 +156,14 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.arrow_back_ios_new_rounded,
-                        color: AppColors.textPrimary,
-                        size: 20,
+                        color: Colors.white.withValues(alpha: 0.8),
+                        size: 18,
                       ),
                     ),
                   ),
@@ -177,7 +173,7 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
                     style: GoogleFonts.nunito(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: Colors.white,
                     ),
                   ),
                   const Spacer(),
@@ -187,15 +183,15 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryLight.withValues(alpha: 0.5),
+                      color: Colors.white.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       AppStrings.gameCount(games.length),
                       style: GoogleFonts.nunito(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white70,
                       ),
                     ),
                   ),
@@ -210,8 +206,8 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: screenWidth > 600 ? 4 : 3,
                   crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: 0.88,
+                  mainAxisSpacing: 18,
+                  childAspectRatio: 0.68,
                 ),
                 itemCount: games.length,
                 itemBuilder: (context, index) {

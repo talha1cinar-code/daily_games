@@ -3,23 +3,23 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
 import 'dart:async';
 import '../services/daily_run_service.dart';
+import '../games/game_registry.dart';
 import '../services/sound_service.dart';
 import '../services/ad_service.dart';
 import '../services/app_strings.dart';
+import '../services/friends_service.dart';
+import '../services/stats_service.dart';
+import '../models/game_model.dart';
+import '../widgets/chunky_button.dart';
+import '../widgets/streak_celebration.dart';
+import '../widgets/coin_badge.dart';
+import '../services/leaderboard_service.dart';
+import '../services/streak_service.dart';
+import '../services/score_scale.dart';
+import '../utils/app_links.dart';
+import 'package:share_plus/share_plus.dart';
 import '../widgets/logo_background.dart';
 import 'leaderboard_screen.dart';
-import '../games/wordle/wordle_screen.dart';
-import '../games/wikitrivia/wikitrivia_screen.dart';
-import '../games/nerdle/nerdle_screen.dart';
-import '../games/worldle/worldle_screen.dart';
-import '../games/rgble/rgble_screen.dart';
-import '../games/sound/sound_screen.dart';
-import '../games/timele/timele_screen.dart';
-import '../games/linele/linele_screen.dart';
-import '../games/huedle/huedle_screen.dart';
-import '../games/fille/fille_screen.dart';
-import '../games/memorle/memorle_screen.dart';
-import '../games/reactle/reactle_screen.dart';
 
 class DailyRunScreen extends StatefulWidget {
   const DailyRunScreen({super.key});
@@ -65,6 +65,14 @@ class _DailyRunScreenState extends State<DailyRunScreen>
 
     _updateTimer();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTimer());
+
+    // Tamamlanmış ama sandığı açılmamış run: ödül kaybolmasın
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final progress = DailyRunService().getProgress();
+      if (mounted && progress.isCompleted && !DailyRunService().isChestOpened(progress)) {
+        _showCompletionDialog();
+      }
+    });
   }
 
   void _updateTimer() {
@@ -106,10 +114,12 @@ class _DailyRunScreenState extends State<DailyRunScreen>
         reverseTransitionDuration: Duration.zero,
       ),
     )
-        .then((_) {
+        .then((_) async {
       if (mounted) {
         SoundService().exitMiniGame();
         setState(() {});
+        await maybeShowStreakCelebration(context);
+        if (!mounted) return;
 
         final progress = DailyRunService().getProgress();
         if (progress.isCompleted) {
@@ -118,8 +128,8 @@ class _DailyRunScreenState extends State<DailyRunScreen>
               if (mounted) _showCompletionDialog();
             }
           );
-        } else if (progress.currentGameIndex == 5) {
-          // 5. oyundan sonra reklam göster (index 5 olunca 5 oyun bitmiş demektir)
+        } else if (progress.currentGameIndex == (DailyRunService.gamesPerRun / 2).ceil()) {
+          // Run'ın ortasında bir kez reklam göster
           AdService().showInterstitialAd();
         }
       }
@@ -131,21 +141,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
       DailyRunService().saveGameScore(gameId, score, durationMs);
     }
 
-    switch (gameId) {
-      case 'wordle': return WordleScreen(isDailyMode: true, onGameComplete: onComplete);
-      case 'wikitrivia': return WikitriviaScreen(isDailyMode: true, onGameComplete: onComplete);
-      case 'rgble': return RgbleScreen(isDailyMode: true, onGameComplete: onComplete);
-      case 'nerdle': return NerdleScreen(isDailyMode: true, onGameComplete: onComplete);
-      case 'linele': return LineleScreen(isDailyMode: true, onGameComplete: onComplete);
-      case 'worldle': return WorldleScreen(isDailyMode: true, onGameComplete: onComplete);
-      case 'sound': return SoundScreen(isDailyMode: true, onGameComplete: onComplete);
-      case 'memorle': return MemorleScreen(isDailyMode: true, onGameComplete: onComplete);
-      case 'huedle': return HuedleScreen(isDailyMode: true, onGameComplete: onComplete);
-      case 'fille': return FilleScreen(isDailyMode: true, onGameComplete: onComplete);
-      case 'timele': return TimeleScreen(isDailyMode: true, onGameComplete: onComplete);
-      case 'reactle': return ReactleScreen(isDailyMode: true, onGameComplete: onComplete);
-      default: return const SizedBox();
-    }
+    return buildGameScreen(gameId, isDailyMode: true, onGameComplete: onComplete) ?? const SizedBox();
   }
 
   void _showLeaderboard(String gameId, String gameName) {
@@ -180,291 +176,159 @@ class _DailyRunScreenState extends State<DailyRunScreen>
   }
 
   void _showCompletionDialog() {
-    final totalScore = DailyRunService().getTotalScore();
-
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          backgroundColor: const Color(0xFF1B1B2F),
-          contentPadding: const EdgeInsets.all(28),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.elasticOut,
-                builder: (context, value, child) => Transform.scale(scale: value, child: child),
-                child: const Text('🏆', style: TextStyle(fontSize: 64)),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                AppStrings.dailyRunCompleted,
-                style: GoogleFonts.nunito(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.amberAccent,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(AppStrings.totalScore, style: GoogleFonts.nunito(fontSize: 14, color: Colors.white54)),
-              const SizedBox(height: 4),
-              Text(
-                totalScore.toStringAsFixed(1),
-                style: GoogleFonts.nunito(
-                  fontSize: 48,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.amberAccent,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        _showDailyRunLeaderboard();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amberAccent.withValues(alpha: 0.2),
-                        foregroundColor: Colors.amberAccent,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: BorderSide(color: Colors.amberAccent.withValues(alpha: 0.5)),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(AppStrings.ranking, style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        Navigator.of(context).pop();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C5CE7),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        elevation: 0,
-                      ),
-                      child: Text(AppStrings.homePage, style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (ctx) => _RunCompleteDialog(
+        progress: DailyRunService().getProgress(),
+        onRanking: () {
+          Navigator.of(ctx).pop();
+          _showDailyRunLeaderboard();
+        },
+        onHome: () {
+          Navigator.of(ctx).pop();
+          Navigator.of(context).pop();
+        },
+      ),
     );
   }
+
+  String _two(int v) => v.toString().padLeft(2, '0');
 
   @override
   Widget build(BuildContext context) {
     final progress = DailyRunService().getProgress();
     final slot = DailyRunService.currentRunSlot();
+    final morning = slot == 1;
+    final left = _timeLeft ?? Duration.zero;
 
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF2E0854), // Vibrant deep purple
-            Color(0xFF0F3460), // Deep blue
-            Color(0xFF16213E), // Dark slate blue
-          ],
-        ),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF3A0F6E), Color(0xFF1A1450), Color(0xFF0E1638)],
+          ),
         ),
         child: Stack(
           children: [
             const LogoBackground(),
             SafeArea(
               child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).pop(),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                          ),
-                          child: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white.withValues(alpha: 0.8), size: 18),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Daily Run',
-                              style: GoogleFonts.nunito(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                children: [
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.28),
+                                borderRadius: BorderRadius.circular(22),
                               ),
+                              child: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                             ),
-                            Row(
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Daily Run',
+                            style: GoogleFonts.nunito(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
+                          ),
+                          const Spacer(),
+                          Container(
+                            height: 36,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.28),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Row(
                               children: [
                                 Icon(
-                                  slot == 1 ? Icons.wb_sunny_rounded : Icons.nights_stay_rounded,
-                                  color: slot == 1 ? Colors.orangeAccent : Colors.indigoAccent,
-                                  size: 14,
+                                  morning ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                                  color: morning ? const Color(0xFFFFC857) : const Color(0xFFB9A8FF),
+                                  size: 18,
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 6),
                                 Text(
-                                  slot == 1 ? AppStrings.morningRound : AppStrings.eveningRound,
+                                  '${_two(left.inHours)}:${_two(left.inMinutes % 60)}:${_two(left.inSeconds % 60)}',
                                   style: GoogleFonts.nunito(
-                                    fontSize: 12,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w900,
-                                    color: slot == 1 ? Colors.orangeAccent : Colors.indigoAccent,
+                                    color: Colors.white,
+                                    fontFeatures: const [FontFeature.tabularFigures()],
                                   ),
                                 ),
-                                if (_timeLeft != null) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      '${_timeLeft!.inHours.toString().padLeft(2, '0')}:${(_timeLeft!.inMinutes % 60).toString().padLeft(2, '0')}:${(_timeLeft!.inSeconds % 60).toString().padLeft(2, '0')}',
-                                      style: GoogleFonts.spaceMono(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white70,
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFE81F).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFFE81F), width: 2),
-                    boxShadow: [BoxShadow(color: const Color(0xFFFFE81F).withValues(alpha: 0.2), blurRadius: 12)],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.stars_rounded, color: Colors.amberAccent, size: 28),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(AppStrings.totalScore, style: GoogleFonts.nunito(fontSize: 12, color: Colors.white54)),
-                          Text(
-                            DailyRunService().getTotalScore().toStringAsFixed(1),
-                            style: GoogleFonts.nunito(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.amberAccent),
                           ),
                         ],
                       ),
-                      const Spacer(),
-                      SizedBox(
-                        width: 50,
-                        height: 50,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            CircularProgressIndicator(
-                              value: progress.scores.length / DailyRunService.gameOrder.length,
-                              strokeWidth: 4,
-                              backgroundColor: Colors.white.withValues(alpha: 0.1),
-                              valueColor: const AlwaysStoppedAnimation(Colors.amberAccent),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _TargetBar(progress: progress),
+                    ),
+                  ),
+                  Expanded(
+                    child: FadeTransition(
+                      opacity: _slideAnimation,
+                      child: _buildPathLayout(progress),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+                    child: ChunkyButton(
+                      face: const Color(0xFFFFB627),
+                      lip: const Color(0xFFC77F00),
+                      height: 58,
+                      onTap: _showDailyRunLeaderboard,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 26),
+                          const SizedBox(width: 8),
+                          Text(
+                            AppStrings.generalRanking,
+                            style: GoogleFonts.nunito(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              shadows: const [Shadow(color: Color(0x55000000), offset: Offset(0, 2))],
                             ),
-                            Text(
-                              '${progress.scores.length}/${DailyRunService.gameOrder.length}',
-                              style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: FadeTransition(
-                  opacity: _slideAnimation,
-                  child: _buildPathLayout(progress),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                child: ElevatedButton.icon(
-                  onPressed: _showDailyRunLeaderboard,
-                  icon: const Icon(Icons.emoji_events_rounded, color: Colors.amberAccent, size: 28),
-                  label: Text(
-                    AppStrings.generalRanking,
-                    style: GoogleFonts.nunito(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amberAccent.withValues(alpha: 0.15),
-                    foregroundColor: Colors.amberAccent,
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.amberAccent.withValues(alpha: 0.5), width: 2),
-                    ),
-                    elevation: 0,
-                  ),
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
-    ),
-  ),
-);
+      ),
+    );
   }
 
   Widget _buildPathLayout(DailyRunProgress progress) {
     const double nodeHeight = 150;
-    final int totalNodes = DailyRunService.gameOrder.length;
-    final double totalHeight = totalNodes * nodeHeight + 100;
+    final order = progress.gameOrder;
+    final int totalNodes = order.length;
+    final double totalHeight = totalNodes * nodeHeight + 40;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.only(top: 20, bottom: 40),
+      padding: const EdgeInsets.only(top: 16, bottom: 24),
       child: SizedBox(
         height: totalHeight,
         child: Stack(
@@ -475,31 +339,26 @@ class _DailyRunScreenState extends State<DailyRunScreen>
                 painter: PathPainter(
                   totalNodes: totalNodes,
                   nodeHeight: nodeHeight,
-                  completedCount: progress.scores.length,
+                  completedCount: progress.completedCount,
                 ),
               ),
             ),
             ...List.generate(totalNodes, (index) {
-              final gameId = DailyRunService.gameOrder[index];
-              final gameName = DailyRunService.getGameDisplayName(gameId);
+              final gameId = order[index];
               final isCompleted = progress.scores.containsKey(gameId);
               final isCurrent = index == progress.currentGameIndex && !progress.isCompleted;
-              final isLocked = index > progress.currentGameIndex && !progress.isCompleted;
-              final score = progress.scores[gameId];
-
               return Positioned(
                 top: index * nodeHeight,
                 left: 0,
                 right: 0,
                 height: nodeHeight,
-                child: _buildPathNode(
-                  index: index,
-                  gameId: gameId,
-                  gameName: gameName,
-                  isCompleted: isCompleted,
-                  isCurrent: isCurrent,
-                  isLocked: isLocked,
-                  score: score,
+                child: Align(
+                  alignment: Alignment(math.sin(index * math.pi / 2.5) * 0.6, 0),
+                  child: isCurrent
+                      ? _buildCurrentNode(gameId)
+                      : isCompleted
+                          ? _buildCompletedNode(gameId, progress.scores[gameId]!)
+                          : _buildLockedNode(gameId),
                 ),
               );
             }),
@@ -509,82 +368,72 @@ class _DailyRunScreenState extends State<DailyRunScreen>
     );
   }
 
-  Widget _buildPathNode({
-    required int index,
-    required String gameId,
-    required String gameName,
-    required bool isCompleted,
-    required bool isCurrent,
-    required bool isLocked,
-    required double? score,
-  }) {
-    final double xAlign = math.sin(index * math.pi / 2.5) * 0.6;
-    
-    Widget nodeContent;
-    if (isCurrent) {
-      nodeContent = _buildCurrentNode(gameId, gameName, index);
-    } else if (isCompleted) {
-      nodeContent = _buildCompletedNode(gameId, gameName, score, index);
-    } else {
-      nodeContent = _buildLockedNode(gameId, gameName, index);
-    }
+  GameModel _game(String id) => games.firstWhere((g) => g.id == id);
 
-    return Align(
-      alignment: Alignment(xAlign, 0),
-      child: nodeContent,
+  Widget _icon(String gameId, double size, {double dim = 0, Widget? overlay, Color? ring}) {
+    final g = _game(gameId);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.27),
+        border: ring != null ? Border.all(color: ring, width: 4) : null,
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 6)),
+          if (ring != null) BoxShadow(color: ring.withValues(alpha: 0.45), blurRadius: 22),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.27 - (ring != null ? 4 : 0)),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (g.imagePath != null) Image.asset(g.imagePath!, fit: BoxFit.cover, cacheWidth: 300),
+            if (dim > 0) Container(color: Colors.black.withValues(alpha: dim)),
+            ?overlay,
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildCurrentNode(String gameId, String gameName, int index) {
-    return _PulseNode(
-      child: GestureDetector(
-        onTap: () => _startGame(gameId),
+  Widget _label(String text, {Color color = Colors.white, Color? bg}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg ?? Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(text, style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w900, color: color)),
+    );
+  }
+
+  Widget _buildCurrentNode(String gameId) {
+    return GestureDetector(
+      onTap: () => _startGame(gameId),
+      child: _PulseNode(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFF007F).withValues(alpha: 0.2),
-                border: Border.all(color: const Color(0xFFFF007F), width: 4),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF007F).withValues(alpha: 0.6),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  AppStrings.start,
-                  style: GoogleFonts.nunito(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 20,
-                    color: Colors.white,
-                    shadows: [
-                      const Shadow(color: Color(0xFFFF007F), blurRadius: 10),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            _icon(gameId, 96, ring: Colors.white),
             const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF121212).withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFF3DDC84),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: const [BoxShadow(color: Color(0xFF1E9E55), offset: Offset(0, 4))],
               ),
-              child: Text(
-                '${index + 1}. $gameName',
-                style: GoogleFonts.nunito(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 2),
+                  Text(
+                    _game(gameId).name.toUpperCase(),
+                    style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white),
+                  ),
+                ],
               ),
             ),
           ],
@@ -593,137 +442,154 @@ class _DailyRunScreenState extends State<DailyRunScreen>
     );
   }
 
-  Widget _buildCompletedNode(String gameId, String gameName, double? score, int index) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 100,
-          height: 80,
-          child: Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.greenAccent.withValues(alpha: 0.1),
-                  border: Border.all(color: Colors.greenAccent, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.greenAccent.withValues(alpha: 0.2),
-                      blurRadius: 10,
-                    )
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.check_rounded, color: Colors.greenAccent, size: 24),
-                    if (score != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1B1B2F),
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.3)),
-                        ),
-                        child: Text(
-                          score.toStringAsFixed(1),
-                          style: GoogleFonts.nunito(
-                            color: Colors.greenAccent,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: GestureDetector(
-                  onTap: () => _showLeaderboard(gameId, gameName),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1B1B2F),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.amberAccent, width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                           color: Colors.amberAccent.withValues(alpha: 0.4),
-                           blurRadius: 8,
-                        )
-                      ]
-                    ),
-                    child: const Icon(
-                      Icons.emoji_events_rounded,
-                      color: Colors.amberAccent,
-                      size: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+  Widget _buildCompletedNode(String gameId, double score) {
+    return GestureDetector(
+      onTap: () => _showLeaderboard(gameId, _game(gameId).name),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _icon(
+            gameId,
+            72,
+            dim: 0.35,
+            overlay: const Center(child: Icon(Icons.check_rounded, color: Color(0xFF5CF08F), size: 44)),
           ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: const Color(0xFF121212).withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            '${index + 1}. $gameName',
-            style: GoogleFonts.nunito(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.greenAccent.withValues(alpha: 0.9),
-            ),
-          ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          _label('${score.toStringAsFixed(0)} ${AppStrings.pointsShort}', color: const Color(0xFF5CF08F)),
+        ],
+      ),
     );
   }
 
-  Widget _buildLockedNode(String gameId, String gameName, int index) {
+  Widget _buildLockedNode(String gameId) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.05),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 2),
-          ),
-          child: Center(
-            child: Icon(Icons.lock_rounded, color: Colors.white.withValues(alpha: 0.3), size: 24),
-          ),
+        _icon(
+          gameId,
+          60,
+          dim: 0.6,
+          overlay: Center(child: Icon(Icons.lock_rounded, color: Colors.white.withValues(alpha: 0.75), size: 24)),
         ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: const Color(0xFF121212).withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(8),
+        const SizedBox(height: 6),
+        _label(_game(gameId).name, color: Colors.white60),
+      ],
+    );
+  }
+}
+
+/// Run boyunca hedef: arkadaşın bugünkü en iyi skoru ya da kendi rekorun.
+class _TargetBar extends StatefulWidget {
+  final DailyRunProgress progress;
+  const _TargetBar({required this.progress});
+
+  @override
+  State<_TargetBar> createState() => _TargetBarState();
+}
+
+class _TargetBarState extends State<_TargetBar> {
+  String? _friendName;
+  double? _friendScore;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFriend();
+  }
+
+  Future<void> _loadFriend() async {
+    final ids = FriendsService().friendIds;
+    if (ids.isEmpty) return;
+    final runId = 'daily_run_${widget.progress.runSlot == 1 ? "morning" : "evening"}';
+    final entries = await LeaderboardService().getDailyEntriesForUsers(runId, ids, widget.progress.dateKey);
+    if (entries.isEmpty || !mounted) return;
+    setState(() {
+      _friendName = entries.first.displayName;
+      _friendScore = entries.first.score;
+    });
+  }
+
+  /// Önceki koşulardaki en iyi toplam. Normalize puanlamadan önceki ham
+  /// toplamlar (run başına 100'den büyük ortalama) hedef olarak kullanılmaz.
+  double? get _personalBest {
+    final max = DailyRunService.gamesPerRun * 100.0;
+    final scores = StatsService()
+        .getStats('daily_run')
+        .map((s) => s.score)
+        .where((v) => v > 0 && v <= max);
+    if (scores.isEmpty) return null;
+    return scores.reduce((a, b) => a > b ? a : b);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = widget.progress.scores.values.fold(0.0, (a, b) => a + b);
+    final best = _personalBest;
+    final String? who;
+    final double? target;
+    if (_friendScore != null) {
+      who = _friendName;
+      target = _friendScore;
+    } else if (best != null) {
+      who = AppStrings.yourLastRun;
+      target = best;
+    } else {
+      who = null;
+      target = null;
+    }
+    final beaten = target != null && total > target;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.stars_rounded, color: Color(0xFFFFC233), size: 26),
+              const SizedBox(width: 8),
+              Text(
+                total.toStringAsFixed(0),
+                style: GoogleFonts.nunito(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white, height: 1),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '/ ${widget.progress.gameOrder.length * 100}',
+                style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white54),
+              ),
+              const Spacer(),
+              if (target != null)
+                Flexible(
+                  child: Text(
+                    beaten ? AppStrings.targetBeaten(who!) : AppStrings.targetToBeat(who!, target.toStringAsFixed(0)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.nunito(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: beaten ? const Color(0xFF5CF08F) : Colors.white70,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          child: Text(
-            '${index + 1}. $gameName',
-            style: GoogleFonts.nunito(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.white.withValues(alpha: 0.6),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: target != null && target > 0
+                  ? (total / target).clamp(0.0, 1.0)
+                  : widget.progress.completedCount / widget.progress.gameOrder.length,
+              minHeight: 10,
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
+              valueColor: AlwaysStoppedAnimation(beaten ? const Color(0xFF5CF08F) : const Color(0xFFFFC233)),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -753,7 +619,7 @@ class _PulseNodeState extends State<_PulseNode> with SingleTickerProviderStateMi
   @override
   Widget build(BuildContext context) {
     return ScaleTransition(
-      scale: Tween<double>(begin: 1.0, end: 1.05).animate(
+      scale: Tween<double>(begin: 1.0, end: 1.06).animate(
         CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
       ),
       child: widget.child,
@@ -831,5 +697,312 @@ class PathPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant PathPainter oldDelegate) {
     return oldDelegate.completedCount != completedCount;
+  }
+}
+
+class _RunCompleteDialog extends StatefulWidget {
+  final DailyRunProgress progress;
+  final VoidCallback onRanking;
+  final VoidCallback onHome;
+
+  const _RunCompleteDialog({required this.progress, required this.onRanking, required this.onHome});
+
+  @override
+  State<_RunCompleteDialog> createState() => _RunCompleteDialogState();
+}
+
+class _RunCompleteDialogState extends State<_RunCompleteDialog> {
+  ({int rank, int total})? _standing;
+  bool _loadingStanding = true;
+
+  DailyRunProgress get _p => widget.progress;
+  double get _total => _p.scores.values.fold(0.0, (a, b) => a + b);
+  String get _runId => 'daily_run_${_p.runSlot == 1 ? "morning" : "evening"}';
+
+  @override
+  void initState() {
+    super.initState();
+    LeaderboardService()
+        .getStanding(_runId, _total, _p.totalDurationMs, _p.dateKey)
+        .then((s) {
+      if (!mounted) return;
+      setState(() {
+        _standing = s;
+        _loadingStanding = false;
+      });
+    });
+  }
+
+  String get _grid => [
+        for (final id in _p.gameOrder) ScoreScale.emoji(_p.scores[id] ?? 0),
+      ].join();
+
+  String? get _standingText {
+    final s = _standing;
+    if (s == null) return null;
+    if (s.total < 10) return AppStrings.rankOf(s.rank, s.total);
+    final pct = (s.rank / s.total * 100).ceil().clamp(1, 100);
+    return AppStrings.topPercent(pct);
+  }
+
+  void _share() {
+    SoundService().playKeyTap();
+    final date = _p.dateKey.split('-');
+    final slot = _p.runSlot == 1 ? AppStrings.morning : AppStrings.evening;
+    final streak = StreakService().currentStreak;
+    final standing = _standingText;
+    final lines = [
+      'Daily Run · ${date[2]}.${date[1]} $slot',
+      _grid,
+      '${_total.toStringAsFixed(0)} / ${_p.gameOrder.length * 100}${standing != null ? ' · $standing' : ''}',
+      if (streak > 1) '🔥 ${AppStrings.streakDays(streak)}',
+      '',
+      AppLinks.playStore,
+    ];
+    SharePlus.instance.share(ShareParams(text: lines.join('\n')));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final streak = StreakService();
+    return AlertDialog(
+      scrollable: true,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: const Color(0xFF1B1B2F),
+      contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            AppStrings.dailyRunCompleted,
+            style: GoogleFonts.nunito(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: _total),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            builder: (context, v, _) => Text(
+              v.toStringAsFixed(0),
+              style: GoogleFonts.nunito(fontSize: 52, fontWeight: FontWeight.w900, color: Colors.amberAccent, height: 1),
+            ),
+          ),
+          Text(
+            '${AppStrings.totalScore} · ${_p.gameOrder.length * 100} ${AppStrings.outOf}',
+            style: GoogleFonts.nunito(fontSize: 13, color: Colors.white54),
+          ),
+          const SizedBox(height: 16),
+          Text(_grid, style: const TextStyle(fontSize: 24, letterSpacing: 2)),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 22,
+            child: _loadingStanding
+                ? const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))
+                : Text(
+                    _standingText ?? '',
+                    style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.greenAccent),
+                  ),
+          ),
+          if (streak.lastRunExtendedStreak) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF6E40).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFF6E40)),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      streak.lastRunEarnedFreeze
+                          ? '${AppStrings.streakDays(streak.currentStreak)} · ${AppStrings.freezeEarned}'
+                          : AppStrings.streakDays(streak.currentStreak),
+                      style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          _RunChest(progress: _p),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _share,
+              icon: const Icon(Icons.ios_share_rounded, size: 20),
+              label: Text(AppStrings.shareResult, style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amberAccent,
+                foregroundColor: const Color(0xFF1B1B2F),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: widget.onRanking,
+                  child: Text(AppStrings.ranking,
+                      style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white70)),
+                ),
+              ),
+              Expanded(
+                child: TextButton(
+                  onPressed: widget.onHome,
+                  child: Text(AppStrings.homePage,
+                      style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white70)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Koşu sandığı: açılınca skora göre coin verir, bir kez reklamla ikiye katlanır.
+class _RunChest extends StatefulWidget {
+  final DailyRunProgress progress;
+  const _RunChest({required this.progress});
+
+  @override
+  State<_RunChest> createState() => _RunChestState();
+}
+
+class _RunChestState extends State<_RunChest> with SingleTickerProviderStateMixin {
+  late final AnimationController _shake = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 600),
+  );
+  int? _earned;
+  bool _opening = false;
+
+  DailyRunProgress get _p => widget.progress;
+
+  @override
+  void initState() {
+    super.initState();
+    if (DailyRunService().isChestOpened(_p)) {
+      _earned = DailyRunService.chestReward(_p) * (DailyRunService().isChestDoubled(_p) ? 2 : 1);
+    }
+  }
+
+  @override
+  void dispose() {
+    _shake.dispose();
+    super.dispose();
+  }
+
+  Future<void> _open() async {
+    if (_opening || _earned != null) return;
+    setState(() => _opening = true);
+    await _shake.forward(from: 0);
+    final amount = await DailyRunService().openChest(_p);
+    SoundService().playReward();
+    if (mounted) setState(() => _earned = amount);
+  }
+
+  void _double() {
+    if (!AdService().isRewardedReady) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(behavior: SnackBarBehavior.floating, content: Text(AppStrings.adNotReady)),
+      );
+      return;
+    }
+    AdService().showRewardedAd(onUserEarnedReward: () async {
+      final extra = await DailyRunService().doubleChest(_p);
+      SoundService().playCoin();
+      if (mounted) setState(() => _earned = (_earned ?? 0) + extra);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final opened = _earned != null;
+    final canDouble = opened && !DailyRunService().isChestDoubled(_p);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFB627).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          AnimatedBuilder(
+            animation: _shake,
+            builder: (context, child) => Transform.rotate(
+              angle: math.sin(_shake.value * math.pi * 8) * 0.18 * (1 - _shake.value),
+              child: Transform.scale(scale: 1 + _shake.value * 0.15, child: child),
+            ),
+            child: Icon(
+              opened ? Icons.inventory_2_outlined : Icons.inventory_2_rounded,
+              color: const Color(0xFFFFC233),
+              size: 44,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: opened
+                ? Row(
+                    children: [
+                      const CoinIcon(size: 26),
+                      const SizedBox(width: 6),
+                      Text(
+                        '+$_earned',
+                        style: GoogleFonts.nunito(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
+                      ),
+                    ],
+                  )
+                : Text(
+                    AppStrings.runChest,
+                    style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white),
+                  ),
+          ),
+          SizedBox(
+            width: 120,
+            child: !opened
+                ? ChunkyButton(
+                    face: const Color(0xFF3DDC84),
+                    lip: const Color(0xFF1E9E55),
+                    height: 42,
+                    radius: 14,
+                    onTap: _opening ? null : _open,
+                    child: Text(AppStrings.openChest,
+                        style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white)),
+                  )
+                : canDouble
+                    ? ChunkyButton(
+                        face: const Color(0xFF4F8BFF),
+                        lip: const Color(0xFF2E5BC4),
+                        height: 42,
+                        radius: 14,
+                        onTap: _double,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.smart_display_rounded, color: Colors.white, size: 18),
+                            const SizedBox(width: 4),
+                            Text('x2',
+                                style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
+                          ],
+                        ),
+                      )
+                    : const SizedBox(),
+          ),
+        ],
+      ),
+    );
   }
 }

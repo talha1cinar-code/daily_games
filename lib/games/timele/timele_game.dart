@@ -2,7 +2,8 @@ import 'dart:math';
 import '../../services/language_service.dart';
 
 class TimeleGame {
-  static const int totalRounds = 5;
+  static const int totalRounds = 4;
+  static const double maxTotal = totalRounds * 10.0;
   static const double maxScorePerRound = 10.0;
   static const int minMs = 300;   // 0.3 saniye
   static const int maxMs = 7000;  // 7.0 saniye
@@ -15,8 +16,8 @@ class TimeleGame {
   bool isGameOver = false;
 
   TimeleGame({List<int>? externalDurations}) {
-    if (externalDurations != null && externalDurations.length == totalRounds) {
-      targetDurations.addAll(externalDurations);
+    if (externalDurations != null && externalDurations.length >= totalRounds) {
+      targetDurations.addAll(externalDurations.take(totalRounds));
     } else {
       _generateTargetDurations();
     }
@@ -30,7 +31,7 @@ class TimeleGame {
   /// Rastgele süreler üret (Biletli mod için)
   static List<int> getRandomDurations() {
     final random = Random();
-    return List.generate(5, (_) {
+    return List.generate(totalRounds, (_) {
       return minMs + random.nextInt(maxMs - minMs + 1);
     });
   }

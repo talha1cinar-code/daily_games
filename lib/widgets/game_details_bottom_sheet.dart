@@ -5,6 +5,8 @@ import '../models/game_model.dart';
 import '../services/ticket_service.dart';
 import '../services/ad_service.dart';
 import '../services/app_strings.dart';
+import '../services/coin_service.dart';
+import '../services/personal_best_service.dart';
 
 class GameDetailsBottomSheet extends StatefulWidget {
   final GameModel game;
@@ -55,7 +57,7 @@ class _GameDetailsBottomSheetState extends State<GameDetailsBottomSheet> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: const BoxDecoration(
-        color: Color(0xFF2A2A3D),
+        color: Color(0xFF181A30),
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: AnimatedBuilder(
@@ -88,25 +90,77 @@ class _GameDetailsBottomSheetState extends State<GameDetailsBottomSheet> {
                 ),
                 child: widget.game.imagePath != null
                     ? ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.asset(widget.game.imagePath!, width: 70, height: 70, fit: BoxFit.cover),
+                        borderRadius: BorderRadius.circular(22),
+                        child: Image.asset(widget.game.imagePath!, width: 88, height: 88, fit: BoxFit.cover, cacheWidth: 264),
                       )
-                    : Icon(widget.game.icon, size: 50, color: Colors.white),
+                    : Icon(widget.game.icon, size: 40, color: Colors.white),
               ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    widget.game.name,
-                    style: GoogleFonts.nunito(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
+              Text(
+                widget.game.name,
+                style: GoogleFonts.nunito(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
               ),
+              if (widget.game.tagline.isNotEmpty)
+                Text(
+                  widget.game.tagline.toUpperCase(),
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                    color: Colors.white54,
+                  ),
+                ),
+              if (PersonalBestService().best(widget.game.id) != null) ...[
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.emoji_events_rounded, color: Color(0xFFFFD54F), size: 18),
+                    const SizedBox(width: 6),
+                    Text(
+                      AppStrings.personalBest(PersonalBestService().best(widget.game.id)!.toStringAsFixed(0)),
+                      style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ],
+              if (widget.game.howTo.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppStrings.howToPlay,
+                        style: GoogleFonts.nunito(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.game.howTo,
+                        style: GoogleFonts.nunito(
+                          fontSize: 14,
+                          height: 1.4,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
 
               // OYNA BUTONU
@@ -163,6 +217,22 @@ class _GameDetailsBottomSheetState extends State<GameDetailsBottomSheet> {
                       );
                     },
                   ),
+                const SizedBox(height: 12),
+                _buildPlayButton(
+                  title: AppStrings.refillWithCoins(CoinService.ticketRefillPrice),
+                  subtitle: '${AppStrings.balance}: ${CoinService().balance}',
+                  timerText: null,
+                  icon: Icons.toll_rounded,
+                  gradientColors: [const Color(0xFFFFC233), const Color(0xFFE08A00)],
+                  shadowColor: const Color(0xFFFFC233),
+                  onTap: CoinService().balance >= CoinService.ticketRefillPrice
+                      ? () async {
+                          if (await CoinService().spend(CoinService.ticketRefillPrice, 'ticket_refill')) {
+                            TicketService().refillWithCoins(widget.game.id);
+                          }
+                        }
+                      : null,
+                ),
               ],
 
               const SizedBox(height: 16),
@@ -191,45 +261,49 @@ class _GameDetailsBottomSheetState extends State<GameDetailsBottomSheet> {
         duration: const Duration(milliseconds: 200),
         child: Container(
           width: double.infinity,
-          height: 72,
+          height: 68,
           decoration: BoxDecoration(
-            color: glowColor.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(40),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: gradientColors,
+            ),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               if (onTap != null)
                 BoxShadow(
-                  color: glowColor.withValues(alpha: 0.6),
-                  blurRadius: 24,
-                  spreadRadius: 2,
+                  color: glowColor.withValues(alpha: 0.35),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
                 ),
             ],
-            border: Border.all(
-              color: glowColor,
-              width: 3.0,
-            ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                title,
-                style: GoogleFonts.nunito(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: 1.0,
-                  shadows: [
-                    Shadow(color: glowColor, blurRadius: 10),
-                  ],
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: Colors.white, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: GoogleFonts.nunito(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 2),
               Text(
                 timerText != null ? '$subtitle  •  $timerText' : subtitle,
                 style: GoogleFonts.nunito(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white70,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white.withValues(alpha: 0.85),
                 ),
               ),
             ],

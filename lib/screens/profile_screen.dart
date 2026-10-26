@@ -4,9 +4,14 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/stats_service.dart';
 import '../services/leaderboard_service.dart';
 import '../services/streak_service.dart';
+import '../services/daily_run_service.dart';
 import '../services/ad_service.dart';
 import '../services/sound_service.dart';
 import '../services/app_strings.dart';
+import '../services/achievement_service.dart';
+import '../widgets/avatar_view.dart';
+import '../widgets/banner_background.dart';
+import '../widgets/avatar_picker_sheet.dart';
 import '../widgets/logo_background.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -121,6 +126,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SliverToBoxAdapter(child: _buildHeader()),
                 SliverToBoxAdapter(child: _buildStreakCard()),
                 SliverToBoxAdapter(child: _buildBestRank()),
+                SliverToBoxAdapter(child: _buildAchievements()),
+                const SliverToBoxAdapter(child: SizedBox(height: 32)),
               ],
             ),
           ],
@@ -130,73 +137,72 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildHeader() {
-    final displayName = LeaderboardService().displayName;
-    const glowColor = Color(0xFFFF007F); // Neon Pink
+    final lb = LeaderboardService();
+    const shadow = [Shadow(color: Color(0x66000000), blurRadius: 4)];
 
-    return Container(
-      margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF16213E), // Arkaplanı saydam olmasın, düz renk olsun
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: glowColor, width: 2.5),
-        boxShadow: [
-          BoxShadow(
-            color: glowColor.withValues(alpha: 0.4),
-            blurRadius: 20,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-              border: Border.all(color: glowColor, width: 2),
-            ),
-            child: Text(
-              LeaderboardService().avatar,
-              style: const TextStyle(fontSize: 46), // Yuvarlağı tam doldursun
-            ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppStrings.welcome,
-                  style: GoogleFonts.nunito(
-                    fontSize: 14,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w600,
+    Future<void> edit() async {
+      await AvatarPickerSheet.show(context);
+      if (mounted) setState(() {});
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+      child: GestureDetector(
+        onTap: edit,
+        child: SizedBox(
+          height: 124,
+          child: BannerBackground(
+            bannerId: lb.banner,
+            plainColor: const Color(0xFF16213E),
+            borderRadius: BorderRadius.circular(24),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  AvatarView(avatar: lb.avatar, size: 80, ring: Colors.white),
+                  const SizedBox(width: 18),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppStrings.welcome,
+                          style: GoogleFonts.nunito(
+                              fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w700, shadows: shadow),
+                        ),
+                        Text(
+                          lb.displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.nunito(
+                              fontSize: 22, color: Colors.white, fontWeight: FontWeight.w900, shadows: shadow),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.edit_rounded, color: Colors.white, size: 14),
+                              const SizedBox(width: 4),
+                              Text(AppStrings.editLook,
+                                  style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Text(
-                  displayName,
-                  style: GoogleFonts.nunito(
-                    fontSize: 22,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    shadows: [
-                      Shadow(
-                        color: glowColor,
-                        blurRadius: 10,
-                      ),
-                    ],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -210,7 +216,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Color streakColor = isFrozen ? const Color(0xFF40C4FF) : (streak > 0 ? const Color(0xFFFF9100) : Colors.grey.shade700);
 
     String subtitle = '';
-    if (streak == 0) {
+    if (isFrozen) {
+      subtitle = AppStrings.streakSavedBody;
+    } else if (streak == 0) {
       subtitle = AppStrings.streakZero;
     } else if (streak < 3) {
       subtitle = AppStrings.streakLow;
@@ -275,7 +283,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const Icon(Icons.ac_unit_rounded, color: Colors.white, size: 16),
                       const SizedBox(width: 4),
                       Text(
-                        '${StreakService().freezeCount} / 5',
+                        '${StreakService().freezeCount} / ${StreakService.maxFreezes}',
                         style: GoogleFonts.nunito(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
@@ -479,7 +487,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onUserEarnedReward: () async {
         final success = await StreakService().restoreStreakWithAd();
         if (mounted && success) {
-          SoundService().playWin();
+          SoundService().playReward();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -499,18 +507,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildWeekTracker() {
-    final today = DateTime.now();
-    List<Widget> dayWidgets = [];
-    
-    final playedDates = _dailyRunHistory.map((s) => s.date).toSet();
+  Set<String> get _playedDates => {
+        ...StreakService().activeDays,
+        ..._dailyRunHistory.map((s) => s.date),
+      };
 
-    for (int i = 4; i >= 0; i--) {
+  DateTime get _turkeyToday {
+    final n = DailyRunService.turkeyNow;
+    return DateTime.utc(n.year, n.month, n.day);
+  }
+
+  Widget _buildWeekTracker() {
+    final today = _turkeyToday;
+    List<Widget> dayWidgets = [];
+
+    final playedDates = _playedDates;
+    final frozenDates = StreakService().frozenDays;
+
+    for (int i = 6; i >= 0; i--) {
       final date = today.subtract(Duration(days: i));
       final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+ 
       final isPlayed = playedDates.contains(dateStr);
+      final isFrozenDay = frozenDates.contains(dateStr);
       final isToday = i == 0;
-      
+
       String dayName = '';
       switch (date.weekday) {
         case 1: dayName = AppStrings.mon; break;
@@ -535,16 +556,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 8),
             Container(
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isPlayed ? Colors.white : Colors.white.withValues(alpha: 0.15),
+                color: isPlayed
+                    ? Colors.white
+                    : isFrozenDay
+                        ? const Color(0xFFB3E5FC)
+                        : Colors.white.withValues(alpha: 0.15),
                 border: isToday && !isPlayed ? Border.all(color: Colors.white, width: 2) : null,
               ),
-              child: isPlayed 
-                  ? const Icon(Icons.check_rounded, color: Color(0xFFFF9100), size: 24)
-                  : null,
+              child: isPlayed
+                  ? const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFF9100), size: 20)
+                  : isFrozenDay
+                      ? const Icon(Icons.ac_unit_rounded, color: Color(0xFF0288D1), size: 18)
+                      : null,
             ),
           ],
         )
@@ -554,8 +581,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         dayWidgets.add(
           Expanded(
             child: Container(
-              height: 4,
-              margin: const EdgeInsets.only(top: 28),
+              height: 3,
+              margin: const EdgeInsets.only(top: 30),
               color: Colors.white.withValues(alpha: 0.2),
             ),
           )
@@ -571,8 +598,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showCalendarDialog() {
-    final playedDates = _dailyRunHistory.map((s) => s.date).toSet();
-    final today = DateTime.now();
+    final playedDates = _playedDates;
+    final frozenDates = StreakService().frozenDays;
+    final today = _turkeyToday;
 
     showDialog(
       context: context,
@@ -610,14 +638,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     final date = today.subtract(Duration(days: 29 - index));
                     final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
                     final isPlayed = playedDates.contains(dateStr);
+                    final isFrozenDay = frozenDates.contains(dateStr);
                     final isToday = index == 29;
-                    
+
                     return Container(
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isPlayed ? const Color(0xFFFF9100) : Colors.white.withValues(alpha: 0.05),
+                        color: isPlayed
+                            ? const Color(0xFFFF9100)
+                            : isFrozenDay
+                                ? const Color(0xFF4FC3F7)
+                                : Colors.white.withValues(alpha: 0.05),
                         border: isToday ? Border.all(color: Colors.white, width: 2) : null,
                       ),
                       child: Center(
@@ -626,7 +659,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           style: GoogleFonts.nunito(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: isPlayed ? Colors.white : Colors.white54,
+                            color: isPlayed || isFrozenDay ? Colors.white : Colors.white54,
                           ),
                         ),
                       ),
@@ -731,5 +764,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildAchievements() {
+    final service = AchievementService();
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                AppStrings.badges,
+                style: GoogleFonts.nunito(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+              ),
+              const Spacer(),
+              Text(
+                '${service.unlockedCount}/${AchievementService.all.length}',
+                style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white54),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          GridView.count(
+            crossAxisCount: 4,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 8,
+            childAspectRatio: 0.75,
+            children: [
+              for (final a in AchievementService.all)
+                GestureDetector(
+                  onTap: () => _showAchievement(a, service.isUnlocked(a.id)),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: service.isUnlocked(a.id)
+                              ? const Color(0xFFFFD54F)
+                              : Colors.white.withValues(alpha: 0.06),
+                        ),
+                        child: Icon(
+                          service.isUnlocked(a.id) ? a.icon : Icons.lock_rounded,
+                          color: service.isUnlocked(a.id) ? const Color(0xFF2A2340) : Colors.white24,
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        a.title,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.nunito(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: service.isUnlocked(a.id) ? Colors.white : Colors.white38,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAchievement(Achievement a, bool unlocked) {
+    SoundService().playKeyTap();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF2A2340),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          content: Text(
+            '${a.title}: ${a.description}${unlocked ? '' : ' (${AppStrings.locked})'}',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+        ),
+      );
   }
 }

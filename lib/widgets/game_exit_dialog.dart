@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/app_strings.dart';
 
-Future<bool> showExitConfirmDialog(BuildContext context) async {
+Future<bool> showExitConfirmDialog(BuildContext context, {bool isDailyRun = false}) async {
   final result = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
@@ -16,7 +16,7 @@ Future<bool> showExitConfirmDialog(BuildContext context) async {
         ),
       ),
       content: Text(
-        AppStrings.exitConfirmation,
+        isDailyRun ? AppStrings.exitConfirmationDailyRun : AppStrings.exitConfirmation,
         style: GoogleFonts.nunito(
           color: Colors.white70,
         ),
