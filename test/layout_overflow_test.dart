@@ -14,6 +14,9 @@ import 'package:daily_games/games/mazele/mazele_screen.dart';
 import 'package:daily_games/games/echole/echole_screen.dart';
 import 'package:daily_games/games/shadowle/shadowle_screen.dart';
 import 'package:daily_games/games/rotatle/rotatle_screen.dart';
+import 'package:daily_games/games/wikitrivia/wikitrivia_screen.dart';
+import 'package:daily_games/games/nerdle/nerdle_screen.dart';
+import 'package:daily_games/games/wordle/wordle_screen.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -80,5 +83,8 @@ void main() {
     expect(await overflowsOf(tester, const EcholeScreen(isDailyMode: false)), isEmpty);
     expect(await overflowsOf(tester, const ShadowleScreen(isDailyMode: false)), isEmpty);
     expect(await overflowsOf(tester, const RotatleScreen(isDailyMode: false)), isEmpty);
+    expect(await overflowsOf(tester, const WikitriviaScreen(isDailyMode: false)), isEmpty);
+    expect(await overflowsOf(tester, const NerdleScreen(isDailyMode: false)), isEmpty);
+    expect(await overflowsOf(tester, const WordleScreen(isDailyMode: false)), isEmpty);
   });
 }

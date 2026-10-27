@@ -51,7 +51,17 @@ class GameTopBar extends StatelessWidget {
   final String? trailing;
   final Color accent;
 
-  const GameTopBar({super.key, required this.title, required this.subtitle, this.trailing, required this.accent});
+  /// Skorun solunda ek düğme (ör. ipucu)
+  final Widget? action;
+
+  const GameTopBar({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+    required this.accent,
+    this.action,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -75,13 +85,20 @@ class GameTopBar extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.nunito(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white)),
+                Text(
+                  title,
+                  style: GoogleFonts.nunito(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white),
+                ),
                 Text(subtitle, style: GoogleFonts.nunito(fontSize: 12, color: Colors.white54)),
               ],
             ),
           ),
+          ?action,
           if (trailing != null)
-            Text(trailing!, style: GoogleFonts.nunito(fontSize: 22, fontWeight: FontWeight.w900, color: accent)),
+            Text(
+              trailing!,
+              style: GoogleFonts.nunito(fontSize: 22, fontWeight: FontWeight.w900, color: accent),
+            ),
         ],
       ),
     );

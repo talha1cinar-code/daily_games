@@ -17,6 +17,12 @@ class QuickleGame {
   static const int streakBonusMs = 2000;
   static const int streakForBonus = 5;
 
+  /// 100 puan için gereken ham puan (~30 hatasız doğru)
+  static const int fullPoints = 150;
+
+  /// Her yanlış ham puandan düşer; yanlış yapan 100 alamaz
+  static const int wrongPenaltyPoints = 6;
+
   final List<QuickleQuestion> questions;
   int index = 0;
   int correct = 0;
@@ -30,7 +36,7 @@ class QuickleGame {
   QuickleQuestion get current => questions[index % questions.length];
 
   /// 0-100 arası skor
-  double get score => min(points, 100).toDouble();
+  double get score => ((points - wrong * wrongPenaltyPoints) / fullPoints * 100).clamp(0.0, 100.0);
 
   /// Doğruysa true döner; ekstra süre/ceza hesabını ekran yapar.
   bool submit(int value) {

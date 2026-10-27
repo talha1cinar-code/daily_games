@@ -18,6 +18,9 @@ class GameResultSheet extends StatelessWidget {
   final Color accent;
   final bool isDailyRun;
 
+  /// Başlık ile istatistikler arasında ek içerik (ör. emoji ızgarası)
+  final Widget? extra;
+
   const GameResultSheet({
     super.key,
     required this.title,
@@ -26,6 +29,7 @@ class GameResultSheet extends StatelessWidget {
     required this.stats,
     required this.accent,
     required this.isDailyRun,
+    this.extra,
   });
 
   static Future<void> show(BuildContext context, GameResultSheet sheet) {
@@ -55,19 +59,12 @@ class GameResultSheet extends StatelessWidget {
             Container(
               width: 40,
               height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
+              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 24),
             Text(
               title,
-              style: GoogleFonts.nunito(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-              ),
+              style: GoogleFonts.nunito(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
             ),
             const SizedBox(height: 8),
             TweenAnimationBuilder<double>(
@@ -77,18 +74,11 @@ class GameResultSheet extends StatelessWidget {
               builder: (context, v, child) => Transform.scale(scale: v, child: child),
               child: Text(
                 headline,
-                style: GoogleFonts.nunito(
-                  fontSize: 52,
-                  fontWeight: FontWeight.w900,
-                  color: accent,
-                  height: 1.1,
-                ),
+                style: GoogleFonts.nunito(fontSize: 52, fontWeight: FontWeight.w900, color: accent, height: 1.1),
               ),
             ),
-            Text(
-              caption,
-              style: GoogleFonts.nunito(fontSize: 14, color: Colors.white54),
-            ),
+            Text(caption, style: GoogleFonts.nunito(fontSize: 14, color: Colors.white54)),
+            if (extra != null) ...[const SizedBox(height: 16), extra!],
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -104,17 +94,10 @@ class GameResultSheet extends StatelessWidget {
                         children: [
                           Text(
                             s.value,
-                            style: GoogleFonts.nunito(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
+                            style: GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white),
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            s.label,
-                            style: GoogleFonts.nunito(fontSize: 12, color: Colors.white54),
-                          ),
+                          Text(s.label, style: GoogleFonts.nunito(fontSize: 12, color: Colors.white54)),
                         ],
                       ),
                     ),

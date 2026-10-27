@@ -262,7 +262,7 @@ class _DuelDetailScreenState extends State<DuelDetailScreen> {
         Text(text,
             textAlign: TextAlign.center,
             style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
-        Text(AppStrings.duelExpiresIn(left.inHours.clamp(0, 48)),
+        Text(AppStrings.duelExpiresIn(left.inHours.clamp(0, Duel.timeout.inHours)),
             style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white54)),
       ],
     );

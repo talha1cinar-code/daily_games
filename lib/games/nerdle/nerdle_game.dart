@@ -16,8 +16,10 @@ class NerdleGame {
   final Map<String, LetterStatus> keyStatuses = {};
 
   NerdleGame({required this.targetEquation})
-      : assert(targetEquation.length == equationLength,
-            'Equation "$targetEquation" has ${targetEquation.length} chars, expected $equationLength');
+    : assert(
+        targetEquation.length == equationLength,
+        'Equation "$targetEquation" has ${targetEquation.length} chars, expected $equationLength',
+      );
 
   // ─── Günün denklemi (ileride Firebase'den gelecek) ───────────────
   static const List<String> _equations = [
@@ -163,8 +165,7 @@ class NerdleGame {
       final newStatus = statuses[i];
       final currentStatus = keyStatuses[char];
 
-      if (currentStatus == null ||
-          _statusPriority(newStatus) > _statusPriority(currentStatus)) {
+      if (currentStatus == null || _statusPriority(newStatus) > _statusPriority(currentStatus)) {
         keyStatuses[char] = newStatus;
       }
     }
@@ -239,9 +240,7 @@ class NerdleGame {
     while (i < expr.length) {
       if ('+-*/'.contains(expr[i])) {
         // Negatif sayı kontrolü (başta veya operatörden sonra)
-        if (expr[i] == '-' &&
-            (i == 0 ||
-                '+-*/'.contains(expr[i - 1]))) {
+        if (expr[i] == '-' && (i == 0 || '+-*/'.contains(expr[i - 1]))) {
           // Negatif sayının parçası
           var num = '-';
           i++;

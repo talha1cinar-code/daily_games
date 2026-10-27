@@ -65,6 +65,14 @@ class NotificationService {
         );
         await androidImplementation.createNotificationChannel(
           const AndroidNotificationChannel(
+            'social_channel',
+            'Düello ve Arkadaş Bildirimleri',
+            description: 'Düello sırası, sonuçları ve arkadaş eklemeleri',
+            importance: Importance.high,
+          ),
+        );
+        await androidImplementation.createNotificationChannel(
+          const AndroidNotificationChannel(
             'streak_channel',
             'Seri Bildirimleri',
             description: 'Seri durumu ve dondurma hakkı bildirimleri',
@@ -284,6 +292,33 @@ class NotificationService {
       body: AppStrings.duelReminderBody(pending),
       scheduledDate: when,
     );
+  }
+
+  /// Düello ve arkadaş olayları için anında bildirim. [key] aynı olay için aynı
+  /// kimliği üretir; böylece aynı bildirim iki kez düşmez, günceller.
+  Future<void> showSocial({required String key, required String title, required String body}) async {
+    try {
+      await flutterLocalNotificationsPlugin.show(
+        id: 500 + (key.hashCode & 0x7FFF),
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'social_channel',
+            'Düello ve Arkadaş Bildirimleri',
+            channelDescription: 'Düello sırası, sonuçları ve arkadaş eklemeleri',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: 'ic_stat_flame',
+            color: Color(0xFFFF5D73),
+          ),
+          iOS: DarwinNotificationDetails(presentAlert: true, presentBadge: true, presentSound: true),
+        ),
+        payload: key,
+      );
+    } catch (e) {
+      debugPrint('Sosyal bildirim hatası: $e');
+    }
   }
 
   Future<void> _scheduleOneTimeNotification({

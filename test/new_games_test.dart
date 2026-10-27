@@ -29,6 +29,14 @@ void main() {
       expect(game.streak, 0);
       expect(game.wrong, 1);
     });
+
+    test('yanlış yapan 100 alamaz', () {
+      final game = QuickleGame(Random(5));
+      game.points = QuickleGame.fullPoints;
+      expect(game.score, 100);
+      game.wrong = 1;
+      expect(game.score, lessThan(100));
+    });
   });
 }
 

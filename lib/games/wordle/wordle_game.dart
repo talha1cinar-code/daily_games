@@ -30,8 +30,7 @@ class WordleGame {
   static final RegExp _englishLetters = RegExp(r'^[A-Z]+$');
 
   /// Aktif dildeki kelime listesine erişim
-  static List<String> get allWords =>
-      LanguageService().isTurkish ? _allWordsTr : _allWordsEn;
+  static List<String> get allWords => LanguageService().isTurkish ? _allWordsTr : _allWordsEn;
 
   /// JSON dosyasından kelimeleri yükle (dile göre)
   static Future<void> loadWords() async {
@@ -48,8 +47,7 @@ class WordleGame {
   static Future<void> _loadTurkishWords() async {
     if (_isLoadedTr) return;
 
-    final String jsonString =
-        await rootBundle.loadString('assets/words/turkish_5_letter_words.json');
+    final String jsonString = await rootBundle.loadString('assets/words/turkish_5_letter_words.json');
     final List<dynamic> jsonList = json.decode(jsonString);
 
     _allWordsTr = jsonList
@@ -66,8 +64,7 @@ class WordleGame {
   static Future<void> _loadEnglishWords() async {
     if (_isLoadedEn) return;
 
-    final String jsonString =
-        await rootBundle.loadString('assets/words/english_5_letter_words.json');
+    final String jsonString = await rootBundle.loadString('assets/words/english_5_letter_words.json');
     final List<dynamic> jsonList = json.decode(jsonString);
 
     _allWordsEn = jsonList
@@ -103,11 +100,7 @@ class WordleGame {
 
   /// Türkçe karakter normalizasyonu (â → A, î → İ, vb.)
   static String _normalizeTurkish(String word) {
-    return toUpperCaseTurkish(word)
-        .replaceAll('Â', 'A')
-        .replaceAll('Î', 'İ')
-        .replaceAll('Û', 'U')
-        .replaceAll('Ê', 'E');
+    return toUpperCaseTurkish(word).replaceAll('Â', 'A').replaceAll('Î', 'İ').replaceAll('Û', 'U').replaceAll('Ê', 'E');
   }
 
   /// Günün kelimesini seç (tarihe göre deterministik)
@@ -174,8 +167,7 @@ class WordleGame {
       final currentStatus = keyboardStatuses[letter];
 
       // Öncelik: correct > present > absent
-      if (currentStatus == null ||
-          _statusPriority(newStatus) > _statusPriority(currentStatus)) {
+      if (currentStatus == null || _statusPriority(newStatus) > _statusPriority(currentStatus)) {
         keyboardStatuses[letter] = newStatus;
       }
     }
@@ -247,11 +239,4 @@ class WordleGame {
 
 enum LetterStatus { empty, absent, present, correct }
 
-enum GuessResult {
-  correct,
-  validGuess,
-  invalidWord,
-  notEnoughLetters,
-  outOfAttempts,
-  gameOver,
-}
+enum GuessResult { correct, validGuess, invalidWord, notEnoughLetters, outOfAttempts, gameOver }

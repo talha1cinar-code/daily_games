@@ -231,12 +231,11 @@ class _ReactleScreenState extends State<ReactleScreen>
   }
 
   /// Skor: Düşük reaksiyon süresi = yüksek puan
-  /// 150ms → 100 puan, 300ms → 70 puan, 500ms → 40 puan, 1000ms → 0 puan
+  /// 180ms → 100 puan, 250ms → 78 puan, 300ms → 62 puan, 500ms ve üstü → 0 puan
   double _calculateScore() {
     final avg = _getAverageReaction();
     if (avg <= 0) return 0;
-    // 150ms ve altı = 100 puan, 1000ms ve üstü = 0 puan
-    final score = ((1000 - avg) / 850 * 100).clamp(0.0, 100.0);
+    final score = ((500 - avg) / 320 * 100).clamp(0.0, 100.0);
     return score;
   }
 

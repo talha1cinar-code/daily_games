@@ -48,6 +48,32 @@ class ShadowleGame {
     }
   }
 
+  /// Ekrandaki izometrik çizimde (göz +x,+y,+z yönünde) her küpün en az bir yüzünün
+  /// ortası görünür mü? Arkada tamamen gizli kalan bir küp silüeti değiştirebilir ama
+  /// oyuncu onu göremez; o zaman yanlış görünen şık doğru çıkar.
+  static bool allVisible(Set<Voxel> vox) {
+    bool seen(double px, double py, double pz, Voxel self) {
+      for (final v in vox) {
+        if (v == self) continue;
+        // Işın p + t(1,1,1) küpü [v, v+1] keser mi?
+        final lo = [v.$1 - px, v.$2 - py, v.$3 - pz];
+        final tMin = lo.reduce(max);
+        final tMax = lo.map((e) => e + 1).reduce(min);
+        if (tMax > 1e-6 && tMin < tMax - 1e-6) return false;
+      }
+      return true;
+    }
+
+    for (final v in vox) {
+      final (x, y, z) = v;
+      final visible = seen(x + 0.5, y + 0.5, z + 1.0, v) || // üst yüz
+          seen(x + 1.0, y + 0.5, z + 0.5, v) || // +x yüzü
+          seen(x + 0.5, y + 1.0, z + 0.5, v); // +y yüzü
+      if (!visible) return false;
+    }
+    return true;
+  }
+
   /// Her küp yere ya da başka bir küpün üstüne oturur ve cisim bütündür
   static Set<Voxel> _shape(Random rng, int count) {
     final vox = <Voxel>{(1, 1, 0)};
@@ -66,6 +92,7 @@ class ShadowleGame {
   static ShadowRound _make(Random rng, ShadowView view, int count) {
     while (true) {
       final vox = _shape(rng, count);
+      if (!allVisible(vox)) continue;
       final correct = project(vox, view);
       // Silüet tek kare ya da düz bir şerit olmasın; biraz düşündürsün
       if (correct.length < 3) continue;

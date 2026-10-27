@@ -604,11 +604,6 @@ class LeaderboardService {
         final timeBonus = durationMs != null ? (300000 - durationMs.clamp(0, 300000)) / 300000 * 10 : 0.0;
         return attemptScore + timeBonus;
 
-      case 'wikitrivia':
-        // Skor zaten doğru sıralanan kart sayısı, süre bonusu ekle
-        final timeBonus = durationMs != null ? (300000 - durationMs.clamp(0, 300000)) / 300000 * 5 : 0.0;
-        return score + timeBonus;
-
       case 'rgble':
       case 'sound':
       case 'timele':
@@ -629,6 +624,7 @@ class LeaderboardService {
       case 'echole':
       case 'shadowle':
       case 'rotatle':
+      case 'wikitrivia':
         // Doğrudan score değeri (0-100 arası)
         return score;
 

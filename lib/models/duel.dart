@@ -6,7 +6,7 @@ enum DuelResult { win, loss, draw }
 /// Skorlar 0-100'e normalize edilmiştir. Firestore: `duels/{id}`.
 class Duel {
   static const int rounds = 3;
-  static const Duration timeout = Duration(hours: 48);
+  static const Duration timeout = Duration(hours: 24);
 
   /// Düelloda çıkabilecek kısa, seed'li oyunlar
   static const List<String> gamePool = [
@@ -44,6 +44,21 @@ class Duel {
   });
 
   static List<String> pickGames(Random rng) => (List<String>.from(gamePool)..shuffle(rng)).take(rounds).toList();
+
+  /// Sunucuya henüz ulaşmamış kendi skorlarımı ekleyerek kopya üretir
+  Duel withMyScores(String me, Map<int, double> extra) => Duel(
+        id: id,
+        players: players,
+        games: games,
+        seed: seed,
+        names: names,
+        avatars: avatars,
+        banners: banners,
+        scores: {...scores, me: {...?scores[me], ...extra}},
+        status: status,
+        winner: winner,
+        updatedAt: updatedAt,
+      );
 
   /// Bir turun seed'i: düelloya özgü, iki oyuncuda aynı
   int roundSeed(int round) => seed + round * 7919;

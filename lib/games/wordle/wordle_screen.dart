@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../theme/app_theme.dart';
-import '../../services/settings_service.dart';
 import '../../services/sound_service.dart';
 import '../../services/daily_challenge_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/ticket_service.dart';
 import '../../services/leaderboard_service.dart';
 import '../../services/personal_best_service.dart';
+import '../../services/language_service.dart';
+import '../../services/score_scale.dart';
 import '../../services/app_strings.dart';
-import '../../widgets/game_exit_wrapper.dart';
-import '../../widgets/coin_offer_dialog.dart';
 import '../../services/coin_service.dart';
+import '../../widgets/game_exit_wrapper.dart';
+import '../../widgets/game_result_sheet.dart';
+import '../../widgets/coin_offer_dialog.dart';
+import '../common/game_common.dart';
+import '../common/guess_board.dart';
 import 'wordle_game.dart';
-import 'widgets/wordle_grid.dart';
-import 'widgets/wordle_keyboard.dart';
 
 class WordleScreen extends StatefulWidget {
   final bool isDailyMode;
@@ -25,18 +26,139 @@ class WordleScreen extends StatefulWidget {
   State<WordleScreen> createState() => _WordleScreenState();
 }
 
-class _WordleScreenState extends State<WordleScreen>
-    with TickerProviderStateMixin {
+class _WordleScreenState extends State<WordleScreen> with TickerProviderStateMixin {
+  static const Color _bg = Color(0xFF121826);
+  static const GuessPalette _palette = GuessPalette(correct: Color(0xFF4CAF6A), present: Color(0xFFE2B63C));
+
+  static const List<List<String>> _rowsTr = [
+    ['E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'Ğ', 'Ü'],
+    ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ş', 'İ'],
+    ['ENTER', 'Z', 'C', 'V', 'B', 'N', 'M', 'Ö', 'Ç', 'DEL'],
+  ];
+  static const List<List<String>> _rowsEn = [
+    ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+    ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+    ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'DEL'],
+  ];
+
   late WordleGame _game;
+  bool _isLoading = true;
+  String _message = '';
+  final SoundService _sound = SoundService();
+  final Stopwatch _stopwatch = Stopwatch();
+
   final Set<int> _hinted = {};
   static const int _maxHints = 2;
+
+  late final AnimationController _shake = AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
+  late final AnimationController _reveal = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1500),
+  );
+  int? _shakingRow;
+  int? _revealingRow;
+  int? _bouncingCell;
+
+  bool get _tr => LanguageService().isTurkish;
 
   // İpucu yalnızca bilet modunda; Daily Run sıralamasını coin etkilemez
   bool get _ticketMode => widget.onGameComplete == null && !widget.isDailyMode;
 
+  @override
+  void initState() {
+    super.initState();
+    _shake.addStatusListener((s) {
+      if (s == AnimationStatus.completed) {
+        _shake.reset();
+        setState(() => _shakingRow = null);
+      }
+    });
+    _reveal.addStatusListener((s) {
+      if (s != AnimationStatus.completed) return;
+      _reveal.reset();
+      setState(() => _revealingRow = null);
+      if (_game.isGameOver) _onGameOver();
+    });
+    _initGame();
+  }
+
+  Future<void> _initGame() async {
+    await WordleGame.loadWords();
+    final word = widget.isDailyMode
+        ? DailyChallengeService.getSeededWordleWord(WordleGame.allWords)
+        : WordleGame.getRandomWord();
+    if (!mounted) return;
+    setState(() {
+      _game = WordleGame(targetWord: word);
+      _isLoading = false;
+    });
+    _stopwatch.start();
+  }
+
+  @override
+  void dispose() {
+    _shake.dispose();
+    _reveal.dispose();
+    super.dispose();
+  }
+
+  bool get _locked => _isLoading || _game.isGameOver || _reveal.isAnimating;
+
+  void _onLetter(String letter) {
+    if (_locked || !_game.addLetter(letter)) return;
+    _sound.playKeyTap();
+    setState(() {
+      _bouncingCell = _game.currentGuess.length - 1;
+      _message = '';
+    });
+    Future.delayed(const Duration(milliseconds: 120), () {
+      if (mounted) setState(() => _bouncingCell = null);
+    });
+  }
+
+  void _onDelete() {
+    if (_locked || !_game.removeLetter()) return;
+    _sound.playDelete();
+    setState(() => _message = '');
+  }
+
+  void _onEnter() {
+    if (_locked) return;
+    final result = _game.submitGuess();
+    void reject(String msg) {
+      _sound.playError();
+      setState(() {
+        _message = msg;
+        _shakingRow = _game.guesses.length;
+      });
+      _shake.forward(from: 0);
+      Future.delayed(const Duration(milliseconds: 1600), () {
+        if (mounted && _message == msg) setState(() => _message = '');
+      });
+    }
+
+    switch (result) {
+      case GuessResult.notEnoughLetters:
+        reject(AppStrings.notEnoughLetters);
+      case GuessResult.invalidWord:
+        reject(AppStrings.invalidWord);
+      case GuessResult.correct:
+      case GuessResult.outOfAttempts:
+      case GuessResult.validGuess:
+        _sound.playFlip();
+        setState(() {
+          _message = '';
+          _revealingRow = _game.guesses.length - 1;
+        });
+        _reveal.forward(from: 0);
+      case GuessResult.gameOver:
+        break;
+    }
+  }
+
   /// Henüz yeşil bulunmamış bir harfi coin karşılığı açar.
   Future<void> _useHint() async {
-    if (_game.isGameOver || _hinted.length >= _maxHints) return;
+    if (_locked || _hinted.length >= _maxHints) return;
     final found = <int>{
       for (final row in _game.guessStatuses)
         for (var i = 0; i < row.length; i++)
@@ -62,457 +184,167 @@ class _WordleScreenState extends State<WordleScreen>
     setState(() {
       _hinted.add(pos);
       _game.keyboardStatuses[letter] = LetterStatus.correct;
+      _message = AppStrings.wordleHintResult(pos + 1, letter);
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.wordleCorrect,
-        content: Text(
-          AppStrings.wordleHintResult(pos + 1, letter),
-          style: GoogleFonts.nunito(fontWeight: FontWeight.w900, color: Colors.white, fontSize: 16),
-        ),
-      ),
-    );
-  }
-  bool _isLoading = true;
-  String _message = '';
-  final SoundService _sound = SoundService();
-
-  // Sallama animasyonu
-  late AnimationController _shakeController;
-  late Animation<double> _shakeAnimation;
-  int? _shakingRow;
-
-  // Reveal animasyonu
-  late AnimationController _revealController;
-  late Animation<double> _revealAnimation;
-  int? _revealingRow;
-
-  // Harf bounce
-  int? _bouncingCell;
-  
-  // Süre ölçümü
-  DateTime? _startTime;
-
-  @override
-  void initState() {
-    super.initState();
-    _shakeController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    _shakeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _shakeController, curve: Curves.easeOut),
-    );
-    _shakeController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _shakeController.reset();
-        setState(() {
-          _shakingRow = null;
-          _message = '';
-        });
-      }
-    });
-
-    _revealController = AnimationController(
-      duration: const Duration(milliseconds: 1800),
-      vsync: this,
-    );
-    _revealAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _revealController, curve: Curves.linear),
-    );
-    _revealController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _revealController.reset();
-        setState(() => _revealingRow = null);
-        if (_game.isGameOver) {
-          if (_game.isWon) {
-            _sound.playWin();
-          } else {
-            _sound.playLose();
-          }
-          
-          final durationMs = _startTime != null ? DateTime.now().difference(_startTime!).inMilliseconds : null;
-          if (widget.onGameComplete != null) {
-            // Daily Run modunda: skoru hesapla ama Firebase'e yazma
-            final score = LeaderboardService.calculateLeaderboardScore(
-              gameId: 'wordle',
-              isWin: _game.isWon,
-              attempts: _game.guesses.length,
-              maxAttempts: _game.maxAttempts,
-              durationMs: durationMs,
-            );
-            widget.onGameComplete!(score, durationMs ?? 0);
-          } else if (widget.isDailyMode) {
-            TicketService().markDailyPlayed('wordle');
-            StatsService().saveDailyStat(
-              gameId: 'wordle',
-              isWin: _game.isWon,
-              attempts: _game.guesses.length,
-              maxAttempts: _game.maxAttempts,
-              targetValue: _game.targetWord,
-              durationMs: durationMs,
-            );
-            LeaderboardService().submitScore(
-              gameId: 'wordle',
-              score: LeaderboardService.calculateLeaderboardScore(
-                gameId: 'wordle',
-                isWin: _game.isWon,
-                attempts: _game.guesses.length,
-                maxAttempts: _game.maxAttempts,
-                durationMs: durationMs,
-              ),
-              attempts: _game.guesses.length,
-              maxAttempts: _game.maxAttempts,
-              durationMs: durationMs,
-              isWin: _game.isWon,
-            );
-          } else {
-            PersonalBestService().submit(
-              'wordle',
-              LeaderboardService.calculateLeaderboardScore(
-                gameId: 'wordle',
-                isWin: _game.isWon,
-                attempts: _game.guesses.length,
-                maxAttempts: _game.maxAttempts,
-                durationMs: durationMs,
-              ),
-            );
-          }
-          
-          Future.delayed(const Duration(milliseconds: 500), _showGameOverDialog);
-        }
-      }
-    });
-
-    _initGame();
   }
 
-  Future<void> _initGame() async {
-    await WordleGame.loadWords();
-    
-    String word;
-    if (widget.isDailyMode) {
-      // Önce Firebase override, yoksa seed tabanlı deterministik seçim
-      word = DailyChallengeService.getSeededWordleWord(WordleGame.allWords);
+  void _onGameOver() {
+    _stopwatch.stop();
+    _game.isWon ? _sound.playWin() : _sound.playLose();
+    final durationMs = _stopwatch.elapsedMilliseconds;
+    final score = LeaderboardService.calculateLeaderboardScore(
+      gameId: 'wordle',
+      isWin: _game.isWon,
+      attempts: _game.guesses.length,
+      maxAttempts: _game.maxAttempts,
+      durationMs: durationMs,
+    );
+    if (widget.onGameComplete != null) {
+      widget.onGameComplete!(score, durationMs);
+    } else if (widget.isDailyMode) {
+      TicketService().markDailyPlayed('wordle');
+      StatsService().saveDailyStat(
+        gameId: 'wordle',
+        isWin: _game.isWon,
+        attempts: _game.guesses.length,
+        maxAttempts: _game.maxAttempts,
+        targetValue: _game.targetWord,
+        durationMs: durationMs,
+      );
+      LeaderboardService().submitScore(
+        gameId: 'wordle',
+        score: score,
+        attempts: _game.guesses.length,
+        maxAttempts: _game.maxAttempts,
+        durationMs: durationMs,
+        isWin: _game.isWon,
+      );
     } else {
-      word = WordleGame.getRandomWord();
+      PersonalBestService().submit('wordle', score);
     }
-    
-    setState(() {
-      _game = WordleGame(targetWord: word);
-      _isLoading = false;
-      _startTime = DateTime.now();
-    });
-  }
 
-  @override
-  void dispose() {
-    _shakeController.dispose();
-    _revealController.dispose();
-    super.dispose();
-  }
-
-  void _onLetterTap(String letter) {
-    if (_game.isGameOver || _revealController.isAnimating) return;
-    final added = _game.addLetter(letter);
-    if (added) {
-      _sound.playKeyTap();
-      setState(() {
-        _bouncingCell = _game.currentGuess.length - 1;
-        _message = '';
-      });
-      // Bounce'u sıfırla
-      Future.delayed(const Duration(milliseconds: 200), () {
-        if (mounted) setState(() => _bouncingCell = null);
-      });
-    }
-  }
-
-  void _onDeleteTap() {
-    if (_game.isGameOver || _revealController.isAnimating) return;
-    final removed = _game.removeLetter();
-    if (removed) {
-      _sound.playDelete();
-      setState(() => _message = '');
-    }
-  }
-
-  void _onEnterTap() {
-    if (_game.isGameOver || _revealController.isAnimating) return;
-
-    final result = _game.submitGuess();
-
-    setState(() {
-      switch (result) {
-        case GuessResult.notEnoughLetters:
-          _message = AppStrings.notEnoughLetters;
-          _shakingRow = _game.guesses.length;
-          _shakeController.forward();
-          _sound.playError();
-        case GuessResult.invalidWord:
-          _message = AppStrings.invalidWord;
-          _shakingRow = _game.guesses.length;
-          _shakeController.forward();
-          _sound.playError();
-        case GuessResult.correct:
-          _message = '${AppStrings.congratulations} 🎉';
-          _revealingRow = _game.guesses.length - 1;
-          _revealController.forward();
-          _sound.playFlip();
-        case GuessResult.outOfAttempts:
-          _message = AppStrings.outOfAttempts;
-          _revealingRow = _game.guesses.length - 1;
-          _revealController.forward();
-          _sound.playFlip();
-        case GuessResult.validGuess:
-          _message = '';
-          _revealingRow = _game.guesses.length - 1;
-          _revealController.forward();
-          _sound.playFlip();
-        case GuessResult.gameOver:
-          break;
-      }
-    });
-  }
-
-  void _showGameOverDialog() {
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          backgroundColor: Colors.white,
-          contentPadding: const EdgeInsets.all(28),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+    Future.delayed(const Duration(milliseconds: 450), () {
+      if (!mounted) return;
+      final statuses = [for (final r in _game.guessStatuses) r.map((s) => s.index).toList()];
+      GameResultSheet.show(
+        context,
+        GameResultSheet(
+          title: _game.isWon ? AppStrings.congratulations : (_tr ? 'Kelime buydu' : 'The word was'),
+          headline: ScoreScale.normalize('wordle', score).toStringAsFixed(0),
+          caption: _tr ? 'Puan (100 üzerinden)' : 'Score (out of 100)',
+          accent: _palette.correct,
+          isDailyRun: widget.onGameComplete != null,
+          extra: Column(
             children: [
-              // Emoji
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.elasticOut,
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: child,
-                  );
-                },
-                child: Text(
-                  _game.isWon ? '🎉' : '😔',
-                  style: const TextStyle(fontSize: 64),
-                ),
-              ),
-              const SizedBox(height: 16),
+              _answerTiles(),
+              const SizedBox(height: 12),
               Text(
-                _game.isWon ? AppStrings.congratulations : AppStrings.sorry,
-                style: GoogleFonts.nunito(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: _game.isWon
-                      ? AppColors.wordleCorrect
-                      : AppColors.accent,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _game.isWon
-                    ? AppStrings.guessedIn(_game.guesses.length, _game.maxAttempts)
-                    : AppStrings.correctWord(_game.targetWord),
-                style: GoogleFonts.nunito(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
-                ),
+                guessEmojiGrid(statuses),
                 textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    widget.onGameComplete != null ? AppStrings.next : AppStrings.homePage,
-                    style: GoogleFonts.nunito(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+                style: const TextStyle(fontSize: 16, height: 1.2),
               ),
             ],
           ),
-        );
-      },
+          stats: [
+            GameResultStat(
+              _tr ? 'Deneme' : 'Tries',
+              '${_game.isWon ? _game.guesses.length : 'X'}/${_game.maxAttempts}',
+            ),
+            GameResultStat(_tr ? 'Süre' : 'Time', '${(durationMs / 1000).round()} sn'),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _answerTiles() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final ch in _game.targetWord.split(''))
+          Container(
+            width: 38,
+            height: 38,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _game.isWon ? _palette.correct : _palette.absent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              ch,
+              style: GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
+            ),
+          ),
+      ],
     );
   }
 
+  int _keyStatus(String k) => (_game.keyboardStatuses[k] ?? LetterStatus.empty).index;
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return GameExitWrapper(
-        gameId: 'wordle',
-        isDailyMode: widget.isDailyMode, onGameComplete: widget.onGameComplete,
-        child: Scaffold(
-          backgroundColor: AppColors.background,
-          body: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(color: AppColors.primary),
-                const SizedBox(height: 16),
-                Text(
-                  AppStrings.loadingWords,
-                  style: GoogleFonts.nunito(
-                    color: AppColors.textSecondary,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     return GameExitWrapper(
       gameId: 'wordle',
-      isDailyMode: widget.isDailyMode, onGameComplete: widget.onGameComplete,
+      isDailyMode: widget.isDailyMode,
+      onGameComplete: widget.onGameComplete,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: _bg,
         body: SafeArea(
-          child: Column(
-            children: [
-              // Üst bar
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Row(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: Color(0xFF4CAF6A)))
+              : Column(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                      onPressed: () => Navigator.maybePop(context),
+                    GameTopBar(
+                      title: 'Wordle',
+                      subtitle: _tr ? '5 harfli kelimeyi 6 denemede bul' : 'Find the 5-letter word in 6 tries',
+                      accent: _palette.correct,
+                      trailing: '${_game.guesses.length}/${_game.maxAttempts}',
+                      action: _ticketMode && !_game.isGameOver && _hinted.length < _maxHints
+                          ? IconButton(
+                              tooltip: AppStrings.hint,
+                              onPressed: _useHint,
+                              icon: const Icon(Icons.lightbulb_rounded, color: Color(0xFFE2B63C)),
+                            )
+                          : null,
                     ),
-                    const Spacer(),
-                    Text(
-                      'WORDLE',
-                      style: GoogleFonts.nunito(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                        letterSpacing: 4,
+                    GuessToast(_message),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                        child: GuessBoard(
+                          rows: _game.maxAttempts,
+                          cols: _game.wordLength,
+                          guesses: _game.guesses,
+                          statuses: [for (final r in _game.guessStatuses) r.map((s) => s.index).toList()],
+                          current: _game.currentGuess,
+                          isOver: _game.isGameOver,
+                          palette: _palette,
+                          reveal: _reveal,
+                          revealingRow: _revealingRow,
+                          shake: _shake,
+                          shakingRow: _shakingRow,
+                          bouncingCell: _bouncingCell,
+                        ),
                       ),
                     ),
-                  const Spacer(),
-                  if (_ticketMode && !_game.isGameOver && _hinted.length < _maxHints)
-                    IconButton(
-                      tooltip: AppStrings.hint,
-                      onPressed: _useHint,
-                      icon: const Icon(Icons.lightbulb_rounded, color: Color(0xFFE8B93A)),
-                    ),
-                  // Ses butonu
-                  GestureDetector(
-                    onTap: () {
-                      SettingsService().toggleSfx();
-                      setState(() {}); // UI güncellemesi için
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        !SettingsService().isSfxEnabled
-                            ? Icons.volume_off_rounded
-                            : Icons.volume_up_rounded,
-                        color: AppColors.textSecondary,
-                        size: 18,
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(6, 0, 6, 10),
+                      child: GuessKeyboard(
+                        rows: _tr ? _rowsTr : _rowsEn,
+                        statusOf: _keyStatus,
+                        palette: _palette,
+                        onKey: _onLetter,
+                        onEnter: _onEnter,
+                        onDelete: _onDelete,
+                        enterLabel: AppStrings.enterKey,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            // Mesaj alanı
-            SizedBox(
-              height: 44,
-              child: Center(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: _message.isNotEmpty
-                      ? Container(
-                          key: ValueKey(_message),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.textPrimary,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            _message,
-                            style: GoogleFonts.nunito(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
+                  ],
                 ),
-              ),
-            ),
-            // Izgara
-            Expanded(
-              child: Center(
-                child: WordleGrid(
-                  game: _game,
-                  shakeAnimation: _shakeAnimation,
-                  shakingRow: _shakingRow,
-                  revealAnimation: _revealAnimation,
-                  revealingRow: _revealingRow,
-                  bouncingCell: _bouncingCell,
-                ),
-              ),
-            ),
-            // Klavye
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
-              child: WordleKeyboard(
-                keyStatuses: _game.keyboardStatuses,
-                onLetterTap: _onLetterTap,
-                onEnterTap: _onEnterTap,
-                onDeleteTap: _onDeleteTap,
-              ),
-            ),
-          ],
         ),
       ),
-    ),
     );
   }
 }

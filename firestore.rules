@@ -23,6 +23,26 @@ service cloud.firestore {
                    && request.resource.data.totalScore <= 12000;
     }
 
+    // Arkadaş kodları: 6 karakterlik kod → kullanıcı kimliği; bir kez yazılır
+    match /friend_codes/{code} {
+      allow read: if true;
+      allow create: if code.size() == 6
+                    && request.resource.data.keys().hasOnly(['userId', 'createdAt'])
+                    && request.resource.data.userId is string;
+      allow update, delete: if false;
+    }
+
+    // Arkadaş eklemeleri: alıcının uygulaması okuyup karşılık verir ve siler
+    match /friend_requests/{requestId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.to is string
+                            && request.resource.data.from is string
+                            && requestId == request.resource.data.to + '_' + request.resource.data.from
+                            && request.resource.data.name is string
+                            && request.resource.data.name.size() <= 40;
+      allow delete: if true;
+    }
+
     // Düello: kupa ligi profilleri (cihaz kimliğiyle)
     match /duel_profiles/{userId} {
       allow read: if true;

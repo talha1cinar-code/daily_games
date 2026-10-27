@@ -95,6 +95,17 @@ void main() {
       }
     });
 
+    test('çizimde gizli kalan küp olmaz', () {
+      // (0,0,0) önündeki (1,1,1) yüzünden tamamen görünmez
+      expect(ShadowleGame.allVisible({(0, 0, 0), (1, 0, 0), (1, 1, 0), (1, 1, 1)}), isFalse);
+      expect(ShadowleGame.allVisible({(0, 0, 0), (1, 0, 0), (1, 1, 0)}), isTrue);
+      for (var seed = 0; seed < 40; seed++) {
+        for (final r in ShadowleGame(Random(seed)).rounds) {
+          expect(ShadowleGame.allVisible(r.voxels), isTrue, reason: 'seed $seed');
+        }
+      }
+    });
+
     test('küpler havada durmaz', () {
       for (final r in ShadowleGame(Random(5)).rounds) {
         for (final (x, y, z) in r.voxels) {

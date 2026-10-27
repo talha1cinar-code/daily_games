@@ -161,7 +161,8 @@ class AppStrings {
   static String targetToBeat(String who, String score) =>
       _lang == 'tr' ? 'Hedef: $who · $score' : 'Target: $who · $score';
   static String get pointsShort => _lang == 'tr' ? 'puan' : 'pts';
-  static String get yourLastRun => _lang == 'tr' ? 'Rekorun' : 'Your best';
+  static String myBestToBeat(String score) => _lang == 'tr' ? 'Rekorun: $score' : 'Your best: $score';
+  static String get newBest => _lang == 'tr' ? 'Yeni rekor!' : 'New best!';
   static String targetBeaten(String who) => _lang == 'tr' ? '$who geçildi!' : 'Beat $who!';
 
   // ─── Oyun içi coin kullanımı (yalnızca bilet modu) ───────────────
@@ -184,10 +185,10 @@ class AppStrings {
   static String get findOpponent => _lang == 'tr' ? 'RAKİP BUL' : 'FIND OPPONENT';
   static String get challengeFriend => _lang == 'tr' ? 'Arkadaşını çağır' : 'Challenge a friend';
   static String get searchingOpponent =>
-      _lang == 'tr' ? 'Rakip aranıyor… Biri bulununca düellon burada belirecek.' : 'Looking for an opponent… Your duel will appear here.';
+      _lang == 'tr' ? 'Şu an arayan biri bekleniyor… Uygulama açık kaldıkça aranır.' : 'Waiting for someone searching right now… Keep the app open.';
   static String get duelHowTo => _lang == 'tr'
-      ? '3 tur, aynı bulmacalar. Turlarını istediğin zaman oyna; 48 saatte bitirmeyen kaybeder.'
-      : '3 rounds, same puzzles. Play your rounds any time; finish within 48 hours or lose.';
+      ? '3 tur, aynı bulmacalar. Turlarını istediğin zaman oyna; 24 saatte bitirmeyen kaybeder.'
+      : '3 rounds, same puzzles. Play your rounds any time; finish within 24 hours or lose.';
   static String get activeDuels => _lang == 'tr' ? 'Düellolarım' : 'My duels';
   static String get finishedDuels => _lang == 'tr' ? 'Bitenler' : 'Finished';
   static String get noDuelsYet => _lang == 'tr'
@@ -198,6 +199,33 @@ class AppStrings {
   static String get yourTurnLong => _lang == 'tr' ? 'Sıra sende, turunu oyna!' : 'Your turn, play your round!';
   static String get waitingOpponentLong =>
       _lang == 'tr' ? 'Turlarını bitirdin, rakibini bekliyorsun' : 'You\'re done, waiting for your opponent';
+  // Sosyal bildirimler
+  static String get notifDuelNewTitle => _lang == 'tr' ? 'Yeni düello! ⚔️' : 'New duel! ⚔️';
+  static String notifDuelNewBody(String name) =>
+      _lang == 'tr' ? '$name seninle düelloya başladı. İlk turu oyna!' : '$name started a duel with you. Play the first round!';
+  static String get notifDuelTurnTitle => _lang == 'tr' ? 'Rakibin oynadı' : 'Your rival played';
+  static String notifDuelTurnBody(String name, int round) => _lang == 'tr'
+      ? '$name $round. turu bitirdi. Sıra sende!'
+      : '$name finished round $round. Your move!';
+  static String notifDuelDoneTitle(DuelResult r) => switch (r) {
+        DuelResult.win => _lang == 'tr' ? 'Düelloyu kazandın! 🏆' : 'You won the duel! 🏆',
+        DuelResult.loss => _lang == 'tr' ? 'Düello bitti' : 'Duel over',
+        DuelResult.draw => _lang == 'tr' ? 'Düello berabere' : 'Duel drawn',
+      };
+  static String notifDuelDoneBody(DuelResult r, String name) => switch (r) {
+        DuelResult.win => _lang == 'tr' ? '$name karşısında galip geldin. Ödülünü al!' : 'You beat $name. Collect your reward!',
+        DuelResult.loss => _lang == 'tr' ? '$name bu sefer kazandı. Rövanş?' : '$name won this time. Rematch?',
+        DuelResult.draw => _lang == 'tr' ? '$name ile berabere kaldınız.' : 'You and $name tied.',
+      };
+  static String get notifFriendTitle => _lang == 'tr' ? 'Yeni arkadaş 👋' : 'New friend 👋';
+  static String notifFriendBody(String name) => _lang == 'tr'
+      ? '$name seni arkadaş olarak ekledi. Artık sıralamada birbirinizi görüyorsunuz.'
+      : '$name added you as a friend. You now see each other on the leaderboard.';
+  static String friendAddedYou(String name) =>
+      _lang == 'tr' ? '$name seni arkadaş olarak ekledi 👋' : '$name added you as a friend 👋';
+  static String get yourFriendCode => _lang == 'tr' ? 'Arkadaş kodun' : 'Your friend code';
+  static String get codeCopied => _lang == 'tr' ? 'Kod kopyalandı' : 'Code copied';
+
   static String duelExpiresIn(int h) => _lang == 'tr' ? '$h saat içinde bitmeli' : 'Must finish within $h hours';
   static String get round => _lang == 'tr' ? 'Tur' : 'Round';
   static String get trophyLeague => _lang == 'tr' ? 'Kupa Ligi' : 'Trophy League';
@@ -280,7 +308,7 @@ class AppStrings {
   static String get friends => _lang == 'tr' ? 'ARKADAŞ' : 'FRIENDS';
   static String get addFriend => _lang == 'tr' ? 'Arkadaş Ekle' : 'Add Friend';
   static String get shareMyCode => _lang == 'tr' ? 'Kodumu Paylaş' : 'Share My Code';
-  static String get pasteFriendCode => _lang == 'tr' ? 'Arkadaş kodunu yapıştır' : 'Paste a friend code';
+  static String get pasteFriendCode => _lang == 'tr' ? 'Arkadaşının kodu (ör. K7M2QX)' : "Friend's code (e.g. K7M2QX)";
   static String get add => _lang == 'tr' ? 'Ekle' : 'Add';
   static String get remove => _lang == 'tr' ? 'Çıkar' : 'Remove';
   static String get time => _lang == 'tr' ? 'Süre' : 'Time';
@@ -299,6 +327,10 @@ class AppStrings {
         return tr ? 'Arkadaş eklendi!' : 'Friend added!';
       case AddFriendResult.invalid:
         return tr ? 'Geçerli bir arkadaş kodu bulunamadı.' : 'That doesn\'t look like a friend code.';
+      case AddFriendResult.notFound:
+        return tr ? 'Bu kodla bir oyuncu bulunamadı.' : 'No player found with that code.';
+      case AddFriendResult.offline:
+        return tr ? 'Bağlantı yok, biraz sonra tekrar dene.' : 'No connection, try again shortly.';
       case AddFriendResult.self:
         return tr ? 'Bu senin kendi kodun.' : 'That\'s your own code.';
       case AddFriendResult.duplicate:

@@ -26,6 +26,7 @@ import 'services/friends_service.dart';
 import 'services/coin_service.dart';
 import 'services/daily_reward_service.dart';
 import 'services/duel_service.dart';
+import 'services/social_watcher.dart';
 import 'utils/app_messenger.dart';
 import 'utils/network_utils.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -73,6 +74,7 @@ void main() async {
   await CoinService().init();
   await DailyRewardService().init();
   await DuelService().init();
+  SocialWatcher.registerBackgroundCheck();
   await MobileAds.instance.initialize();
   AdService().init();
   

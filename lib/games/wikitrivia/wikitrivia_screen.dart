@@ -1,16 +1,15 @@
-
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
-import '../../widgets/game_exit_wrapper.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../widgets/game_exit_wrapper.dart';
+import '../../widgets/game_result_sheet.dart';
 import '../../services/sound_service.dart';
 import '../../services/daily_challenge_service.dart';
-import '../../services/ticket_service.dart';
-import '../../services/stats_service.dart';
-import '../../services/leaderboard_service.dart';
-import '../../services/personal_best_service.dart';
+import '../../services/language_service.dart';
+import '../common/game_common.dart';
 import 'wikitrivia_game.dart';
 import 'wikitrivia_data.dart';
-import '../../services/language_service.dart';
 
 class WikitriviaScreen extends StatefulWidget {
   final bool isDailyMode;
@@ -21,418 +20,173 @@ class WikitriviaScreen extends StatefulWidget {
   State<WikitriviaScreen> createState() => _WikitriviaScreenState();
 }
 
-class _WikitriviaScreenState extends State<WikitriviaScreen>
-    with TickerProviderStateMixin {
-  late WikitriviaGame _game;
-  bool _isLoading = true;
+class _WikitriviaScreenState extends State<WikitriviaScreen> {
+  static const Color _bg = Color(0xFF1C1726);
+  static const Color _accent = Color(0xFFFFB547);
+  static const Color _paper = Color(0xFFF6EEDC);
+  static const Color _ink = Color(0xFF3A2E22);
+  static const Color _good = Color(0xFF3DDC84);
+  static const Color _bad = Color(0xFFFF5D73);
+
+  late final WikitriviaGame _game;
   final SoundService _sound = SoundService();
+  final Stopwatch _stopwatch = Stopwatch()..start();
+  final Map<HistoricalEvent, GlobalKey> _keys = {};
 
-  late AnimationController _cardEntryController;
-  late Animation<double> _cardEntryAnimation;
+  /// Son yerleştirilen kart; kısa süre vurgulanır ve üstte sonucu gösterilir
+  PlacementInfo? _last;
+  bool _busy = false;
+  int? _hoverSlot;
+  Timer? _timer;
 
-  late AnimationController _flashController;
-  late Animation<double> _flashAnimation;
-
-  PlacementResult? _lastResult;
-  int? _flashingIndex;
-  int? _activeDropSlot;
-
-  final ScrollController _scrollController = ScrollController();
-
-  late AnimationController _lifeShakeController;
-  late Animation<double> _lifeShakeAnimation;
-  
-  // Süre ölçümü
-  DateTime? _startTime;
+  bool get _tr => LanguageService().isTurkish;
 
   @override
   void initState() {
     super.initState();
-
-    _cardEntryController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    _cardEntryAnimation = CurvedAnimation(
-      parent: _cardEntryController,
-      curve: Curves.easeOutBack,
-    );
-
-    _flashController = AnimationController(
-      duration: const Duration(milliseconds: 900),
-      vsync: this,
-    );
-    _flashAnimation = CurvedAnimation(
-      parent: _flashController,
-      curve: Curves.easeOut,
-    );
-    _flashController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        setState(() {
-          _lastResult = null;
-          _flashingIndex = null;
-        });
-        _flashController.reset();
-
-        if (_game.isGameOver) {
-          final durationMs = _startTime != null ? DateTime.now().difference(_startTime!).inMilliseconds : null;
-          if (widget.onGameComplete != null) {
-            final score = LeaderboardService.calculateLeaderboardScore(
-              gameId: 'wikitrivia',
-              isWin: true,
-              score: _game.score.toDouble(),
-              durationMs: durationMs,
-            );
-            widget.onGameComplete!(score, durationMs ?? 0);
-          } else if (widget.isDailyMode) {
-            TicketService().markDailyPlayed('wikitrivia');
-            StatsService().saveDailyStat(
-              gameId: 'wikitrivia',
-              isWin: true,
-              score: _game.score.toDouble(),
-              attempts: _game.score,
-              maxAttempts: 10,
-              durationMs: durationMs,
-            );
-            LeaderboardService().submitScore(
-              gameId: 'wikitrivia',
-              score: LeaderboardService.calculateLeaderboardScore(
-                gameId: 'wikitrivia',
-                isWin: true,
-                score: _game.score.toDouble(),
-                durationMs: durationMs,
-              ),
-              attempts: _game.score,
-              maxAttempts: 10,
-              durationMs: durationMs,
-              isWin: true,
-            );
-          } else {
-            PersonalBestService().submit(
-              'wikitrivia',
-              LeaderboardService.calculateLeaderboardScore(
-                gameId: 'wikitrivia',
-                isWin: true,
-                score: _game.score.toDouble(),
-                durationMs: durationMs,
-              ),
-            );
-          }
-          Future.delayed(
-              const Duration(milliseconds: 400), _showGameOverDialog);
-        } else {
-          _cardEntryController.reset();
-          _cardEntryController.forward();
-        }
-      }
-    });
-
-    _lifeShakeController = AnimationController(
-      duration: const Duration(milliseconds: 400),
-      vsync: this,
-    );
-    _lifeShakeAnimation = CurvedAnimation(
-      parent: _lifeShakeController,
-      curve: Curves.elasticIn,
-    );
-    _lifeShakeController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _lifeShakeController.reset();
-      }
-    });
-
-    _initGame();
-  }
-
-  Future<void> _initGame() async {
-    List<HistoricalEvent>? externalEvents;
-    
-    if (widget.isDailyMode) {
-      final sourceEvents = LanguageService().currentLanguage == 'tr' ? defaultHistoricalEventsTr : defaultHistoricalEventsEn;
-      externalEvents = DailyChallengeService.getSeededWikitriviaEvents(
-        sourceEvents,
-        take: 15,
-      );
-    }
-    
-    setState(() {
-      _game = WikitriviaGame(externalEvents: externalEvents);
-      _isLoading = false;
-      _startTime = DateTime.now();
-    });
-    
-    _cardEntryController.forward();
+    final pool = _tr ? defaultHistoricalEventsTr : defaultHistoricalEventsEn;
+    final rng = widget.isDailyMode ? Random(DailyChallengeService.getSeededSeed('wikitrivia')) : Random();
+    _game = WikitriviaGame(pool, rng);
   }
 
   @override
   void dispose() {
-    _cardEntryController.dispose();
-    _flashController.dispose();
-    _lifeShakeController.dispose();
-    _scrollController.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 
-  void _placeCard(int insertIndex) {
-    if (_flashController.isAnimating) return;
+  GlobalKey _keyOf(HistoricalEvent e) => _keys.putIfAbsent(e, GlobalKey.new);
 
-    final info = _game.placeCard(insertIndex);
-
+  void _place(int slot) {
+    if (_busy || _game.currentCard == null) return;
+    final info = _game.place(slot);
+    info.isCorrect ? _sound.playCorrect() : _sound.playError();
     setState(() {
-      _lastResult = info.result;
-      _flashingIndex = info.correctIndex;
-      _activeDropSlot = null;
+      _last = info;
+      _busy = true;
+      _hoverSlot = null;
     });
-
-    if (info.result == PlacementResult.correct) {
-      _sound.playKeyTap();
-    } else {
-      _sound.playError();
-      _lifeShakeController.forward();
-    }
-
-    _flashController.forward();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToIndex(info.correctIndex);
+      final ctx = _keys[info.event]?.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          alignment: 0.5,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+    _timer = Timer(Duration(milliseconds: info.isCorrect ? 1000 : 1700), () {
+      if (!mounted) return;
+      if (_game.isGameOver) {
+        _finish();
+        return;
+      }
+      setState(() {
+        _busy = false;
+        _last = null;
+      });
     });
   }
 
-  void _scrollToIndex(int index) {
-    if (!_scrollController.hasClients) return;
-    final targetOffset = (index * 175.0) - 40;
-    _scrollController.animateTo(
-      targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
+  void _finish() {
+    _stopwatch.stop();
+    final score = _game.score.toDouble();
+    reportGameScore(
+      gameId: 'wikitrivia',
+      isDailyMode: widget.isDailyMode,
+      onGameComplete: widget.onGameComplete,
+      score: score,
+      durationMs: _stopwatch.elapsedMilliseconds,
+      attempts: _game.correct,
+      maxAttempts: _game.deckTotal,
     );
-  }
-
-  void _showGameOverDialog() {
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          backgroundColor: const Color(0xFF2A2A3E),
-          contentPadding: const EdgeInsets.all(28),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.elasticOut,
-                builder: (context, value, child) =>
-                    Transform.scale(scale: value, child: child),
-                child: Text(
-                  _game.isWon ? '🏆' : '💔',
-                  style: const TextStyle(fontSize: 56),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _game.isWon ? (LanguageService().currentLanguage == 'tr' ? 'Tebrikler!' : 'Congratulations!') : (LanguageService().currentLanguage == 'tr' ? 'Oyun Bitti!' : 'Game Over!'),
-                style: GoogleFonts.nunito(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  color: _game.isWon
-                      ? const Color(0xFF6BCB77)
-                      : const Color(0xFFFF6B6B),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                LanguageService().currentLanguage == 'tr' ? '${_game.score}/${_game.totalAttempts} doğru yerleştirme' : '${_game.score}/${_game.totalAttempts} correct placements',
-                style: GoogleFonts.nunito(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C5CE7),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                  child: Text(widget.onGameComplete != null ? (LanguageService().currentLanguage == 'tr' ? 'Sonraki' : 'Next') : (LanguageService().currentLanguage == 'tr' ? 'Ana Sayfa' : 'Home'),
-                      style: GoogleFonts.nunito(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    final String title;
+    if (_game.isPerfect) {
+      title = _tr ? 'Tarih ustası!' : 'History master!';
+    } else if (_game.correct >= 7) {
+      title = _tr ? 'Harika kronoloji' : 'Great chronology';
+    } else {
+      title = _tr ? 'Zaman çizelgen hazır' : 'Timeline complete';
+    }
+    GameResultSheet.show(
+      context,
+      GameResultSheet(
+        title: title,
+        headline: score.toStringAsFixed(0),
+        caption: _tr ? 'Puan (100 üzerinden)' : 'Score (out of 100)',
+        accent: _accent,
+        isDailyRun: widget.onGameComplete != null,
+        stats: [
+          GameResultStat(_tr ? 'Doğru' : 'Correct', '${_game.correct}/${_game.deckTotal}'),
+          GameResultStat(_tr ? 'Yanlış' : 'Wrong', '${_game.wrong}'),
+          GameResultStat(_tr ? 'Süre' : 'Time', '${(_stopwatch.elapsedMilliseconds / 1000).round()} sn'),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF1E1E2E),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-    return GameExitWrapper(gameId: 'wikitrivia', isDailyMode: widget.isDailyMode, onGameComplete: widget.onGameComplete, child: Scaffold(
-      backgroundColor: const Color(0xFF1E1E2E),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildTopBar(),
-            const SizedBox(height: 16),
-            // Üstteki mevcut kart — yukarıda, sabit konumda
-            _buildDraggableCurrentCard(),
-            const Spacer(),
-            // İpucu yazısı
-            if (_game.currentCard != null && !_flashController.isAnimating)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.swipe_rounded,
-                        color: Colors.white.withValues(alpha: 0.3), size: 18),
-                    const SizedBox(width: 6),
-                    Text(
-                      LanguageService().currentLanguage == 'tr' ? 'Kartı sürükleyerek zaman çizelgesine bırak' : 'Drag the card and drop to timeline',
-                      style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white.withValues(alpha: 0.3),
-                      ),
-                    ),
-                  ],
-                ),
+    return GameExitWrapper(
+      gameId: 'wikitrivia',
+      isDailyMode: widget.isDailyMode,
+      onGameComplete: widget.onGameComplete,
+      child: Scaffold(
+        backgroundColor: _bg,
+        body: SafeArea(
+          child: Column(
+            children: [
+              GameTopBar(
+                title: 'Wikitrivia',
+                subtitle: _tr ? 'Olayı zaman çizelgesine yerleştir' : 'Place the event on the timeline',
+                trailing: '${_game.score}',
+                accent: _accent,
               ),
-            // Zaman çizelgesi
-            _buildTimeline(),
-            const SizedBox(height: 24),
-          ],
+              _buildStatus(),
+              const SizedBox(height: 12),
+              _buildCurrent(),
+              const SizedBox(height: 10),
+              Expanded(child: _buildTimeline()),
+            ],
+          ),
         ),
       ),
-    ));
+    );
   }
 
-  // ─── Üst bar ──────────────────────────────────────────────────────
-  Widget _buildTopBar() {
+  // ─── Can ve ilerleme ─────────────────────────────────────────────
+  Widget _buildStatus() {
+    final cardNo = min(_game.placed + (_busy ? 0 : 1), _game.deckTotal);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          // Geri butonu
-          GestureDetector(
-            onTap: () => Navigator.of(context).maybePop(),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
+          for (var i = 0; i < WikitriviaGame.maxLives; i++)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
+                child: Icon(
+                  i < _game.remainingLives ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  key: ValueKey(i < _game.remainingLives),
+                  color: i < _game.remainingLives ? _bad : Colors.white24,
+                  size: 24,
+                ),
               ),
-              child: Icon(Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white.withValues(alpha: 0.8), size: 18),
             ),
-          ),
-          const SizedBox(width: 16),
-          // Başlık
-          Text(
-            'Wikitrivia',
-            style: GoogleFonts.nunito(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
           const Spacer(),
-          // Yanlış hakları — kırmızı yuvarlaklar
-          AnimatedBuilder(
-            animation: _lifeShakeAnimation,
-            builder: (context, child) {
-              final shake = _lifeShakeAnimation.value *
-                  8 *
-                  (1 - _lifeShakeAnimation.value);
-              return Transform.translate(
-                offset: Offset(shake, 0),
-                child: child,
-              );
-            },
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(_game.maxWrongs, (i) {
-                final isLost = i < _game.wrongCount;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isLost
-                          ? const Color(0xFFFF4757)
-                          : const Color(0xFFFF4757).withValues(alpha: 0.15),
-                      border: Border.all(
-                        color: const Color(0xFFFF4757),
-                        width: 2,
-                      ),
-                      boxShadow: isLost
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFFFF4757)
-                                    .withValues(alpha: 0.4),
-                                blurRadius: 8,
-                                spreadRadius: 1,
-                              )
-                            ]
-                          : [],
-                    ),
-                    child: isLost
-                        ? const Icon(Icons.close_rounded,
-                            color: Colors.white, size: 14)
-                        : null,
-                  ),
-                );
-              }),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Skor
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.check_circle_rounded,
-                    color: Color(0xFF6BCB77), size: 18),
-                const SizedBox(width: 5),
-                Text(
-                  '${_game.score}',
-                  style: GoogleFonts.nunito(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
+            child: Text(
+              _tr ? 'Kart $cardNo/${_game.deckTotal}' : 'Card $cardNo/${_game.deckTotal}',
+              style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white70),
             ),
           ),
         ],
@@ -440,316 +194,264 @@ class _WikitriviaScreenState extends State<WikitriviaScreen>
     );
   }
 
-  // ─── Sürüklenebilir üst kart ─────────────────────────────────────
-  Widget _buildDraggableCurrentCard() {
-    if (_game.currentCard == null || _flashController.isAnimating) {
-      return const SizedBox(height: 120);
+  // ─── Üstteki kart (sıradaki ya da son sonuç) ─────────────────────
+  Widget _buildCurrent() {
+    final last = _last;
+    final card = _game.currentCard;
+    Widget child;
+    if (last != null) {
+      final color = last.isCorrect ? _good : _bad;
+      child = _bigCard(
+        key: ValueKey('r${last.event.title}'),
+        event: last.event,
+        border: color,
+        footer: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(last.isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded, color: color, size: 20),
+            const SizedBox(width: 6),
+            Text(
+              last.isCorrect
+                  ? '${_tr ? 'Doğru!' : 'Correct!'}  +${WikitriviaGame.pointsPerCard}'
+                  : (_tr ? 'Yanlış, doğru yerine kondu' : 'Wrong, moved to its spot'),
+              style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w900, color: color),
+            ),
+            const SizedBox(width: 10),
+            _yearChip(last.event.year, color),
+          ],
+        ),
+      );
+    } else if (card != null) {
+      final face = _bigCard(event: card, border: _accent, footer: _yearChip(null, _accent));
+      child = Draggable<HistoricalEvent>(
+        key: ValueKey('c${card.title}'),
+        data: card,
+        feedback: Material(
+          color: Colors.transparent,
+          child: SizedBox(
+            width: MediaQuery.sizeOf(context).width - 80,
+            child: Opacity(
+              opacity: 0.95,
+              child: _bigCard(event: card, border: _accent, footer: null, compact: true),
+            ),
+          ),
+        ),
+        childWhenDragging: Opacity(opacity: 0.35, child: face),
+        onDragEnd: (_) => setState(() => _hoverSlot = null),
+        child: face,
+      );
+    } else {
+      child = const SizedBox(height: 120);
     }
 
-    final card = _game.currentCard!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 280),
+        transitionBuilder: (c, a) => FadeTransition(
+          opacity: a,
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0, -0.15), end: Offset.zero).animate(a),
+            child: c,
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
 
-    return FadeTransition(
-      opacity: _cardEntryAnimation,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, -0.3),
-          end: Offset.zero,
-        ).animate(_cardEntryAnimation),
-        child: Draggable<int>(
-          data: -1,
-          feedback: Material(
-            color: Colors.transparent,
-            child: Transform.scale(
-              scale: 0.92,
-              child: _EventCard(
-                event: card,
-                showYear: false,
-                isCurrentCard: true,
-                isDragging: true,
-              ),
+  Widget _bigCard({
+    Key? key,
+    required HistoricalEvent event,
+    required Color border,
+    required Widget? footer,
+    bool compact = false,
+  }) {
+    return Container(
+      key: key,
+      width: double.infinity,
+      constraints: BoxConstraints(minHeight: compact ? 0 : 120),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+      decoration: BoxDecoration(
+        color: _paper,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border, width: 3),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            event.title,
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.nunito(fontSize: 17, fontWeight: FontWeight.w800, color: _ink, height: 1.25),
+          ),
+          if (footer != null) ...[const SizedBox(height: 12), footer],
+        ],
+      ),
+    );
+  }
+
+  Widget _yearChip(int? year, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.6), width: 1.5),
+      ),
+      child: Text(
+        year == null ? (_tr ? '? Yıl' : '? Year') : WikitriviaGame.formatYear(year, _tr),
+        style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w900, color: _ink),
+      ),
+    );
+  }
+
+  // ─── Dikey zaman çizelgesi ───────────────────────────────────────
+  Widget _buildTimeline() {
+    final canPlace = !_busy && _game.currentCard != null;
+    final items = <Widget>[];
+    for (var i = 0; i <= _game.timeline.length; i++) {
+      items.add(_buildSlot(i, canPlace));
+      if (i < _game.timeline.length) items.add(_buildEvent(_game.timeline[i]));
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(22)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: ListView(padding: const EdgeInsets.symmetric(vertical: 10), children: items),
+      ),
+    );
+  }
+
+  /// Sol sütun: yıl, orta sütun: çizgi, sağ: içerik. Satırlar arasında çizgi kesintisiz devam eder.
+  Widget _rail({required Widget left, required Widget right, bool dot = false, Color dotColor = _accent}) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 70,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(fit: BoxFit.scaleDown, child: left),
             ),
           ),
-          childWhenDragging: Opacity(
-            opacity: 0.2,
-            child: _EventCard(
-              event: card,
-              showYear: false,
-              isCurrentCard: true,
+          SizedBox(
+            width: 28,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(width: 3, color: Colors.white.withValues(alpha: 0.14)),
+                if (dot)
+                  Container(
+                    width: 13,
+                    height: 13,
+                    decoration: BoxDecoration(
+                      color: dotColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: _bg, width: 2.5),
+                    ),
+                  ),
+              ],
             ),
           ),
-          onDragStarted: () => setState(() => _activeDropSlot = null),
-          onDragEnd: (_) => setState(() => _activeDropSlot = null),
-          child: _EventCard(
-            event: card,
-            showYear: false,
-            isCurrentCard: true,
+          Expanded(
+            child: Padding(padding: const EdgeInsets.only(right: 12), child: right),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEvent(HistoricalEvent e) {
+    final last = _last;
+    final isNew = last != null && identical(last.event, e);
+    final color = isNew ? (last.isCorrect ? _good : _bad) : _accent;
+    return KeyedSubtree(
+      key: _keyOf(e),
+      child: _rail(
+        dot: true,
+        dotColor: color,
+        left: Text(
+          WikitriviaGame.formatYear(e.year, _tr),
+          style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w900, color: isNew ? color : Colors.white),
+        ),
+        right: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isNew ? color.withValues(alpha: 0.18) : Colors.white.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: isNew ? color : Colors.transparent, width: 2),
+          ),
+          child: Text(
+            e.title,
+            style: GoogleFonts.nunito(fontSize: 13.5, fontWeight: FontWeight.w700, color: Colors.white, height: 1.25),
           ),
         ),
       ),
     );
   }
 
-  // ─── Zaman çizelgesi ─────────────────────────────────────────────
-  Widget _buildTimeline() {
-    final totalItems = _game.timeline.length * 2 + 1;
-    final canDrop = _game.currentCard != null && !_flashController.isAnimating;
-
-    return SizedBox(
-      height: 250,
-      child: ListView.builder(
-        controller: _scrollController,
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: totalItems,
-        itemBuilder: (context, index) {
-          if (index.isEven) {
-            final slotIndex = index ~/ 2;
-            return _buildDropSlot(slotIndex, canDrop);
-          } else {
-            final cardIndex = index ~/ 2;
-            return _buildTimelineCard(cardIndex);
-          }
-        },
-      ),
-    );
-  }
-
-  // ─── Drop slot (artı işareti yok, sadece görünmez bırakma alanı) ──
-  Widget _buildDropSlot(int slotIndex, bool canDrop) {
-    final isActive = _activeDropSlot == slotIndex;
-
-    return DragTarget<int>(
+  Widget _buildSlot(int slot, bool canPlace) {
+    if (!canPlace) return _rail(left: const SizedBox(), right: const SizedBox(height: 8));
+    return DragTarget<HistoricalEvent>(
       onWillAcceptWithDetails: (_) {
-        if (!canDrop) return false;
-        setState(() => _activeDropSlot = slotIndex);
+        setState(() => _hoverSlot = slot);
         return true;
       },
       onLeave: (_) {
-        setState(() {
-          if (_activeDropSlot == slotIndex) _activeDropSlot = null;
-        });
+        if (_hoverSlot == slot) setState(() => _hoverSlot = null);
       },
-      onAcceptWithDetails: (_) {
-        _placeCard(slotIndex);
-      },
-      builder: (context, candidateData, rejectedData) {
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: isActive ? 80 : (canDrop ? 20 : 4),
-          margin: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: isActive
-                ? const Color(0xFF6C5CE7).withValues(alpha: 0.15)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: isActive
-                ? Border.all(
-                    color: const Color(0xFF6C5CE7).withValues(alpha: 0.5),
-                    width: 2.5,
-                  )
-                : null,
-          ),
-          child: isActive
-              ? Center(
-                  child: Icon(
-                    Icons.arrow_downward_rounded,
-                    color: const Color(0xFF6C5CE7).withValues(alpha: 0.7),
-                    size: 22,
-                  ),
-                )
-              : null,
-        );
-      },
-    );
-  }
-
-  // ─── Timeline'daki kart ───────────────────────────────────────────
-  Widget _buildTimelineCard(int cardIndex) {
-    final event = _game.timeline[cardIndex];
-    final isFlashing = _flashingIndex == cardIndex && _lastResult != null;
-
-    Color? highlightColor;
-
-    if (isFlashing) {
-      highlightColor = _lastResult == PlacementResult.correct
-          ? const Color(0xFF6BCB77)
-          : const Color(0xFFFF4757);
-    }
-
-    return AnimatedBuilder(
-      animation: _flashAnimation,
-      builder: (context, child) {
-        final highlightOpacity =
-            isFlashing ? (1.0 - _flashAnimation.value) : 0.0;
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: _EventCard(
-            event: event,
-            showYear: true,
-            highlightColor: isFlashing ? highlightColor : null,
-            highlightOpacity: highlightOpacity,
-          ),
-        );
-      },
-    );
-  }
-
-  Color getYearColor(int year) {
-    if (year < 1500) return const Color(0xFFE17055);
-    if (year < 1800) return const Color(0xFFFDAA5E);
-    if (year < 1950) return const Color(0xFF6BCB77);
-    if (year < 2000) return const Color(0xFF74B9FF);
-    return const Color(0xFFA29BFE);
-  }
-}
-
-// ─── Olay Kartı Widget'ı ────────────────────────────────────────────
-class _EventCard extends StatelessWidget {
-  final HistoricalEvent event;
-  final bool showYear;
-  final bool isCurrentCard;
-  final bool isDragging;
-  final Color? highlightColor;
-  final double highlightOpacity;
-
-  const _EventCard({
-    required this.event,
-    this.showYear = true,
-    this.isCurrentCard = false,
-    this.isDragging = false,
-    this.highlightColor,
-    this.highlightOpacity = 0.0,
-  });
-
-  Color _getYearColor(int year) {
-    if (year < 1500) return const Color(0xFFE17055);
-    if (year < 1800) return const Color(0xFFFDAA5E);
-    if (year < 1950) return const Color(0xFF6BCB77);
-    if (year < 2000) return const Color(0xFF74B9FF);
-    return const Color(0xFFA29BFE);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cardWidth = isCurrentCard ? 180.0 : 150.0;
-    final cardHeight = isCurrentCard ? 120.0 : 100.0;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Kart gövdesi
-        Container(
-          width: cardWidth,
-          height: cardHeight,
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5F0E8),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: highlightColor?.withValues(alpha: 0.7) ??
-                  (isCurrentCard
-                      ? Colors.white.withValues(alpha: 0.25)
-                      : Colors.black.withValues(alpha: 0.05)),
-              width: highlightColor != null ? 3 : 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: isDragging
-                    ? Colors.black.withValues(alpha: 0.35)
-                    : (highlightColor?.withValues(
-                            alpha: highlightOpacity * 0.35) ??
-                        Colors.black.withValues(alpha: 0.12)),
-                blurRadius: isDragging ? 24 : 10,
-                offset: Offset(0, isDragging ? 10 : 4),
+      onAcceptWithDetails: (_) => _place(slot),
+      builder: (context, candidate, rejected) {
+        final hover = _hoverSlot == slot;
+        return _rail(
+          left: const SizedBox(),
+          right: GestureDetector(
+            onTap: () => _place(slot),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              height: hover ? 52 : 38,
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                color: _accent.withValues(alpha: hover ? 0.3 : 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _accent.withValues(alpha: hover ? 0.9 : 0.45), width: 1.5),
               ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Stack(
-              children: [
-                // Flash renk overlay
-                if (highlightColor != null && highlightOpacity > 0)
-                  Positioned.fill(
-                    child: Container(
-                      color: highlightColor!
-                          .withValues(alpha: highlightOpacity * 0.12),
-                    ),
-                  ),
-                // İçerik
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_rounded, color: _accent, size: 18),
+                  const SizedBox(width: 4),
+                  Flexible(
                     child: Text(
-                      event.title,
-                      style: GoogleFonts.nunito(
-                        fontSize: isCurrentCard ? 15 : 13,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF2D3436),
-                        height: 1.25,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 4,
+                      _slotLabel(slot),
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w800, color: _accent),
                     ),
                   ),
-                ),
-                // Doğru/yanlış ikonu
-                if (highlightColor != null && highlightOpacity > 0.3)
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: highlightColor!.withValues(alpha: 0.3),
-                            blurRadius: 6,
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        highlightColor == const Color(0xFF6BCB77)
-                            ? Icons.check_circle_rounded
-                            : Icons.cancel_rounded,
-                        color: highlightColor,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        // Yıl etiketi
-        if (showYear) ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-            decoration: BoxDecoration(
-              color: highlightColor?.withValues(alpha: 0.2) ??
-                  _getYearColor(event.year).withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: highlightColor?.withValues(alpha: 0.3) ??
-                    _getYearColor(event.year).withValues(alpha: 0.3),
-              ),
-            ),
-            child: Text(
-              '${event.year}',
-              style: GoogleFonts.nunito(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: highlightColor ?? _getYearColor(event.year),
+                ],
               ),
             ),
           ),
-        ],
-      ],
+        );
+      },
     );
+  }
+
+  String _slotLabel(int slot) {
+    final t = _game.timeline;
+    if (slot == 0) return _tr ? 'En eski: buraya' : 'Earliest: here';
+    if (slot == t.length) return _tr ? 'En yeni: buraya' : 'Latest: here';
+    return _tr ? 'Buraya yerleştir' : 'Place here';
   }
 }

@@ -124,7 +124,7 @@ void main() {
     });
 
     test('normalize puan 0-100 aralığında', () {
-      expect(ScoreScale.normalize('wikitrivia', 12), 100);
+      expect(ScoreScale.normalize('wikitrivia', 100), 100);
       expect(ScoreScale.normalize('huedle', 5000), 100);
       expect(ScoreScale.normalize('rgble', 15), 50);
       expect(ScoreScale.normalize('slicele', -3), 0);

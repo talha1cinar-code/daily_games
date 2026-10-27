@@ -279,13 +279,4 @@ class DailyChallengeService {
   static int getSeededSliceleSeed() => getDailyRunSeed('slicele');
   static int getSeededStackleSeed() => getDailyRunSeed('stackle');
   static int getSeededMirrorleSeed() => getDailyRunSeed('mirrorle');
-
-  /// Wikitrivia: Seed tabanlı olay shuffle.
-  /// [allEvents] olay listesi dışarıdan geçilir.
-  static List<T> getSeededWikitriviaEvents<T>(List<T> allEvents, {int take = 15}) {
-    final seed = getDailyRunSeed('wikitrivia');
-    final rng = Random(seed);
-    final pool = List<T>.from(allEvents)..shuffle(rng);
-    return pool.take(take).toList();
-  }
 }

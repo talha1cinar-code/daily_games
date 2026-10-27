@@ -52,8 +52,8 @@ const List<GameModel> games = [
     isComingSoon: false,
     taglineTr: 'Tarih',
     taglineEn: 'History',
-    howToTr: 'Kartları sürükleyip zaman çizelgesinde doğru yıla bırak. 7 doğruya ulaş, 2 hata hakkın var.',
-    howToEn: 'Drag each card onto the timeline in the right order. Reach 7 correct, you have 2 mistakes.',
+    howToTr: 'Her olayı zaman çizelgesinde doğru aralığa koy: dokun ya da sürükle. 10 kart, 3 can; her doğru 10 puan.',
+    howToEn: 'Put each event in the right gap on the timeline: tap or drag. 10 cards, 3 lives; each correct is 10 points.',
   ),
   GameModel(
     name: 'Nerdle',
@@ -151,8 +151,8 @@ const List<GameModel> games = [
     isComingSoon: false,
     taglineTr: 'Hızlı Hesap',
     taglineEn: 'Mental Math',
-    howToTr: '60 saniyede olabildiğince çok işlem çöz. Seri doğrular bonus süre kazandırır, yanlış cevap 3 saniye götürür.',
-    howToEn: 'Solve as many sums as you can in 60 seconds. Streaks earn bonus time, a wrong answer costs 3 seconds.',
+    howToTr: '60 saniyede olabildiğince çok işlem çöz. Seri doğrular bonus süre kazandırır, yanlış cevap 3 saniye ve puan götürür.',
+    howToEn: 'Solve as many sums as you can in 60 seconds. Streaks earn bonus time, a wrong answer costs 3 seconds and points.',
   ),
   GameModel(
     name: 'Slicele',

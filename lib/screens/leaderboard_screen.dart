@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/leaderboard_service.dart';
 import '../services/app_strings.dart';
@@ -14,11 +15,7 @@ class LeaderboardScreen extends StatefulWidget {
   final String gameId;
   final String gameName;
 
-  const LeaderboardScreen({
-    super.key,
-    required this.gameId,
-    required this.gameName,
-  });
+  const LeaderboardScreen({super.key, required this.gameId, required this.gameName});
 
   @override
   State<LeaderboardScreen> createState() => _LeaderboardScreenState();
@@ -176,10 +173,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
   }
 
   Future<void> _showAddFriendDialog() async {
-    final code = await showDialog<String>(
-      context: context,
-      builder: (ctx) => const _AddFriendDialog(),
-    );
+    final code = await showDialog<String>(context: context, builder: (ctx) => const _AddFriendDialog());
     if (code == null || code.trim().isEmpty || !mounted) return;
     final result = await FriendsService().addFromText(code);
     if (!mounted) return;
@@ -221,11 +215,25 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
 
   String _score(double v) => _isDailyRun ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
 
-  _RankRow _dailyRow(int rank, LeaderboardEntry e) => _RankRow(rank, e.userId, e.displayName, e.avatar, e.banner,
-      _score(e.score), e.durationMs != null ? _formatDuration(e.durationMs!) : null);
+  _RankRow _dailyRow(int rank, LeaderboardEntry e) => _RankRow(
+    rank,
+    e.userId,
+    e.displayName,
+    e.avatar,
+    e.banner,
+    _score(e.score),
+    e.durationMs != null ? _formatDuration(e.durationMs!) : null,
+  );
 
   _RankRow _weeklyRow(int rank, WeeklyLeaderboardEntry e) => _RankRow(
-      rank, e.userId, e.displayName, e.avatar, e.banner, _score(e.totalScore), AppStrings.daysPlayed(e.daysPlayed));
+    rank,
+    e.userId,
+    e.displayName,
+    e.avatar,
+    e.banner,
+    _score(e.totalScore),
+    AppStrings.daysPlayed(e.daysPlayed),
+  );
 
   // ─── Ekran ──────────────────────────────────────────────────────
   @override
@@ -246,10 +254,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
               child: Column(
                 children: [
                   _buildHeader(),
-                  if (_isDailyRun) ...[
-                    const SizedBox(height: 12),
-                    _buildSlotToggle(),
-                  ],
+                  if (_isDailyRun) ...[const SizedBox(height: 12), _buildSlotToggle()],
                   const SizedBox(height: 12),
                   _buildTabs(),
                   const SizedBox(height: 8),
@@ -304,7 +309,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.28), borderRadius: BorderRadius.circular(22)),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.28),
+                borderRadius: BorderRadius.circular(22),
+              ),
               child: const Icon(Icons.arrow_back_rounded, color: Colors.white),
             ),
           ),
@@ -313,8 +321,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(AppStrings.rankingShort,
-                    style: GoogleFonts.nunito(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, height: 1.1)),
+                Text(
+                  AppStrings.rankingShort,
+                  style: GoogleFonts.nunito(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1.1,
+                  ),
+                ),
                 Text(
                   _currentGameName,
                   maxLines: 1,
@@ -344,15 +359,26 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
               borderRadius: BorderRadius.circular(19),
               border: Border.all(color: selected ? color : Colors.transparent, width: 1.5),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 16, color: selected ? color : Colors.white54),
-                const SizedBox(width: 6),
-                Text(label,
-                    style: GoogleFonts.nunito(
-                        fontSize: 14, fontWeight: FontWeight.w800, color: selected ? Colors.white : Colors.white54)),
-              ],
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 16, color: selected ? color : Colors.white54),
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: GoogleFonts.nunito(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                        color: selected ? Colors.white : Colors.white54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -365,10 +391,20 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
       decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(23)),
       child: Row(
         children: [
-          option(morning, Icons.wb_sunny_rounded, AppStrings.morning, const Color(0xFFFFC857),
-              () => _switchDailyRunSlot('daily_run_morning', AppStrings.dailyRunSlotName(1))),
-          option(!morning, Icons.nightlight_round, AppStrings.evening, const Color(0xFFB9A8FF),
-              () => _switchDailyRunSlot('daily_run_evening', AppStrings.dailyRunSlotName(2))),
+          option(
+            morning,
+            Icons.wb_sunny_rounded,
+            AppStrings.morning,
+            const Color(0xFFFFC857),
+            () => _switchDailyRunSlot('daily_run_morning', AppStrings.dailyRunSlotName(1)),
+          ),
+          option(
+            !morning,
+            Icons.nightlight_round,
+            AppStrings.evening,
+            const Color(0xFFB9A8FF),
+            () => _switchDailyRunSlot('daily_run_evening', AppStrings.dailyRunSlotName(2)),
+          ),
         ],
       ),
     );
@@ -413,26 +449,44 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
                           SoundService().playKeyTap();
                           _tabController.animateTo(i);
                         },
-                        child: Builder(builder: (context) {
-                          // Göstergeye yakınlığa göre yazı rengi yumuşakça değişir
-                          final t = (1 - (pos - i).abs()).clamp(0.0, 1.0);
-                          final color = Color.lerp(Colors.white60, const Color(0xFF3A0F6E), t)!;
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(icons[i], size: 17, color: color),
-                              const SizedBox(width: 5),
-                              Flexible(
-                                child: Text(
-                                  labels[i],
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w900, color: color),
+                        child: Builder(
+                          builder: (context) {
+                            // Göstergeye yakınlığa göre yazı rengi yumuşakça değişir
+                            final t = (1 - (pos - i).abs()).clamp(0.0, 1.0);
+                            final color = Color.lerp(Colors.white60, const Color(0xFF3A0F6E), t)!;
+                            // Simge + yazı tek parça halinde kutunun tam ortasında; dar ekranda kesilmek yerine küçülür
+                            return Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Icon(icons[i], size: 17, color: color),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        labels[i],
+                                        maxLines: 1,
+                                        textHeightBehavior: const TextHeightBehavior(
+                                          applyHeightToFirstAscent: false,
+                                          applyHeightToLastDescent: false,
+                                        ),
+                                        style: GoogleFonts.nunito(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w900,
+                                          color: color,
+                                          height: 1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ],
-                          );
-                        }),
+                            );
+                          },
+                        ),
                       ),
                     ),
                 ],
@@ -453,7 +507,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
         (i) => Container(
           height: i == 0 ? 150 : 62,
           margin: const EdgeInsets.only(bottom: 10),
-          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(18)),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(18),
+          ),
         ),
       ),
     );
@@ -468,17 +525,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
           children: [
             Icon(Icons.emoji_events_rounded, size: 72, color: Colors.white.withValues(alpha: 0.2)),
             const SizedBox(height: 12),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white60)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white60),
+            ),
             const SizedBox(height: 20),
             ChunkyButton(
               face: const Color(0xFF3DDC84),
               lip: const Color(0xFF1E9E55),
               height: 52,
               onTap: () => Navigator.pop(context),
-              child: Text(AppStrings.playNow,
-                  style: GoogleFonts.nunito(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white)),
+              child: Text(
+                AppStrings.playNow,
+                style: GoogleFonts.nunito(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -525,7 +586,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
             decoration: BoxDecoration(
               color: const Color(0xFF120C2C),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, -6))],
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, -6)),
+              ],
             ),
             child: Container(
               decoration: BoxDecoration(
@@ -540,64 +603,87 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
   }
 
   Widget _buildPodium(List<_RankRow> top) {
-    // Sıra: 2 - 1 - 3
-    final order = [if (top.length > 1) top[1], top[0], if (top.length > 2) top[2]];
+    // Sıra: 2 - 1 - 3. Az kişi varsa boş sütun kalır; 1. sıra ekranı kaplamaz
+    final order = [top.length > 1 ? top[1] : null, top[0], top.length > 2 ? top[2] : null];
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         for (final r in order)
           Expanded(
-            child: GestureDetector(
-              onTap: () => _showPlayerCard(r),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (r.rank == 1) const Icon(Icons.workspace_premium_rounded, color: Color(0xFFFFD54F), size: 30),
-                  AvatarView(avatar: r.avatar, size: r.rank == 1 ? 78 : 62, ring: _medals[r.rank - 1]),
-                  const SizedBox(height: 6),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      r.isMe ? AppStrings.you : r.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.nunito(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: r.isMe ? const Color(0xFF7CF5C4) : Colors.white,
-                      ),
+            child: r == null
+                ? const SizedBox()
+                : GestureDetector(
+                    onTap: () => _showPlayerCard(r),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (r.rank == 1)
+                          const Icon(Icons.workspace_premium_rounded, color: Color(0xFFFFD54F), size: 30),
+                        AvatarView(avatar: r.avatar, size: r.rank == 1 ? 78 : 62, ring: _medals[r.rank - 1]),
+                        const SizedBox(height: 6),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Text(
+                            r.isMe ? AppStrings.you : r.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.nunito(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: r.isMe ? const Color(0xFF7CF5C4) : Colors.white,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          r.score,
+                          style: GoogleFonts.nunito(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: _medals[r.rank - 1],
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          height: [76.0, 58.0, 46.0][r.rank - 1],
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                _medals[r.rank - 1].withValues(alpha: 0.32),
+                                _medals[r.rank - 1].withValues(alpha: 0.04),
+                              ],
+                            ),
+                            border: Border(top: BorderSide(color: _medals[r.rank - 1], width: 3)),
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                          ),
+                          alignment: Alignment.topCenter,
+                          padding: const EdgeInsets.only(top: 8),
+                          // Madalya: renkli halka içinde sıra
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black.withValues(alpha: 0.3),
+                              border: Border.all(color: _medals[r.rank - 1], width: 2),
+                            ),
+                            child: Text(
+                              '${r.rank}',
+                              style: GoogleFonts.nunito(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                color: _medals[r.rank - 1],
+                                height: 1,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    r.score,
-                    style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w900, color: _medals[r.rank - 1]),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    height: [84.0, 62.0, 48.0][r.rank - 1],
-                    margin: const EdgeInsets.symmetric(horizontal: 5),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [_medals[r.rank - 1], Color.lerp(_medals[r.rank - 1], Colors.black, 0.45)!],
-                      ),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '${r.rank}',
-                      style: GoogleFonts.nunito(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        shadows: const [Shadow(color: Color(0x55000000), offset: Offset(0, 2))],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
       ],
     );
@@ -622,9 +708,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
                     borderRadius: BorderRadius.circular(18),
                     child: ShaderMask(
                       blendMode: BlendMode.dstIn,
-                      shaderCallback: (rect) => const LinearGradient(
-                        colors: [Colors.transparent, Color(0xCC000000)],
-                      ).createShader(rect),
+                      shaderCallback: (rect) =>
+                          const LinearGradient(colors: [Colors.transparent, Color(0xCC000000)]).createShader(rect),
                       child: Image.asset(banner.asset!, fit: BoxFit.cover, cacheWidth: 600),
                     ),
                   ),
@@ -665,8 +750,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
                           ),
                         ),
                         if (r.detail != null)
-                          Text(r.detail!,
-                              style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white54)),
+                          Text(
+                            r.detail!,
+                            style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white54),
+                          ),
                       ],
                     ),
                   ),
@@ -731,8 +818,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
               r.isMe ? '${r.name} (${AppStrings.you})' : r.name,
               style: GoogleFonts.nunito(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white),
             ),
-            Text(BannerStyle.byId(r.banner).name,
-                style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white54)),
+            Text(
+              BannerStyle.byId(r.banner).name,
+              style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white54),
+            ),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 22),
@@ -740,7 +829,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
                 children: [
                   _cardStat(AppStrings.ranking, '#${r.rank}'),
                   _cardStat(AppStrings.totalScore, r.score),
-                  if (r.detail != null) _cardStat(_tabController.index == 1 ? AppStrings.days : AppStrings.time, r.detail!),
+                  if (r.detail != null)
+                    _cardStat(_tabController.index == 1 ? AppStrings.days : AppStrings.time, r.detail!),
                 ],
               ),
             ),
@@ -751,64 +841,121 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
   }
 
   Widget _cardStat(String label, String value) => Expanded(
-        child: Column(
-          children: [
-            Text(value, style: GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
-            Text(label, style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white54)),
-          ],
+    child: Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
         ),
-      );
+        Text(
+          label,
+          style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white54),
+        ),
+      ],
+    ),
+  );
 
   Widget _buildFriendsTab() {
     final friends = FriendsService();
     final buttons = Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: ChunkyButton(
-              face: const Color(0xFF4F8BFF),
-              lip: const Color(0xFF2E5BC4),
-              height: 50,
-              radius: 16,
-              onTap: friends.shareMyCode,
+          // Kendi kısa kodum: dokununca kopyalanır
+          GestureDetector(
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: friends.myCode));
+              SoundService().playKeyTap();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 1),
+                  content: Text(AppStrings.codeCopied, style: GoogleFonts.nunito(fontWeight: FontWeight.w700)),
+                ),
+              );
+            },
+            child: Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.ios_share_rounded, color: Colors.white, size: 20),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(AppStrings.shareMyCode,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white)),
+                  Text(
+                    AppStrings.yourFriendCode,
+                    style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white60),
                   ),
+                  const Spacer(),
+                  Text(
+                    friends.myCode,
+                    style: GoogleFonts.nunito(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.copy_rounded, size: 18, color: Colors.white54),
                 ],
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ChunkyButton(
-              face: const Color(0xFF3DDC84),
-              lip: const Color(0xFF1E9E55),
-              height: 50,
-              radius: 16,
-              onTap: _showAddFriendDialog,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 20),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(AppStrings.addFriend,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white)),
+          Row(
+            children: [
+              Expanded(
+                child: ChunkyButton(
+                  face: const Color(0xFF4F8BFF),
+                  lip: const Color(0xFF2E5BC4),
+                  height: 50,
+                  radius: 16,
+                  onTap: friends.shareMyCode,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.ios_share_rounded, color: Colors.white, size: 20),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          AppStrings.shareMyCode,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ChunkyButton(
+                  face: const Color(0xFF3DDC84),
+                  lip: const Color(0xFF1E9E55),
+                  height: 50,
+                  radius: 16,
+                  onTap: _showAddFriendDialog,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 20),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          AppStrings.addFriend,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -826,9 +973,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
                   children: [
                     Icon(Icons.group_add_rounded, size: 72, color: Colors.white.withValues(alpha: 0.2)),
                     const SizedBox(height: 12),
-                    Text(AppStrings.noFriendsYet,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white60)),
+                    Text(
+                      AppStrings.noFriendsYet,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white60),
+                    ),
                   ],
                 ),
               ),
@@ -851,17 +1000,19 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             children: [
               for (var i = 0; i < _friendEntries!.length; i++)
-                Builder(builder: (context) {
-                  final row = _dailyRow(i + 1, _friendEntries![i]);
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.22),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: _buildRow(row, onLongPress: row.isMe ? null : () => _confirmRemove(row.userId)),
-                  );
-                }),
+                Builder(
+                  builder: (context) {
+                    final row = _dailyRow(i + 1, _friendEntries![i]);
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: _buildRow(row, onLongPress: row.isMe ? null : () => _confirmRemove(row.userId)),
+                    );
+                  },
+                ),
               for (final id in notPlayed)
                 GestureDetector(
                   onLongPress: () => _confirmRemove(id),
@@ -883,8 +1034,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> with SingleTicker
                             style: GoogleFonts.nunito(color: Colors.white54, fontWeight: FontWeight.w800),
                           ),
                         ),
-                        Text(AppStrings.notPlayedToday,
-                            style: GoogleFonts.nunito(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w700)),
+                        Text(
+                          AppStrings.notPlayedToday,
+                          style: GoogleFonts.nunito(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
                       ],
                     ),
                   ),
@@ -929,11 +1082,15 @@ class _AddFriendDialogState extends State<_AddFriendDialog> {
     return AlertDialog(
       backgroundColor: const Color(0xFF1B1B2F),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text(AppStrings.addFriend, style: GoogleFonts.nunito(color: Colors.white, fontWeight: FontWeight.w800)),
+      title: Text(
+        AppStrings.addFriend,
+        style: GoogleFonts.nunito(color: Colors.white, fontWeight: FontWeight.w800),
+      ),
       content: TextField(
         controller: _controller,
         autofocus: true,
-        style: GoogleFonts.nunito(color: Colors.white),
+        textCapitalization: TextCapitalization.characters,
+        style: GoogleFonts.nunito(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 3),
         decoration: InputDecoration(
           hintText: AppStrings.pasteFriendCode,
           hintStyle: GoogleFonts.nunito(color: Colors.white38),
@@ -949,7 +1106,10 @@ class _AddFriendDialogState extends State<_AddFriendDialog> {
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, _controller.text),
-          child: Text(AppStrings.add, style: GoogleFonts.nunito(color: Colors.greenAccent, fontWeight: FontWeight.w800)),
+          child: Text(
+            AppStrings.add,
+            style: GoogleFonts.nunito(color: Colors.greenAccent, fontWeight: FontWeight.w800),
+          ),
         ),
       ],
     );

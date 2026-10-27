@@ -7,7 +7,6 @@ class ScoreScale {
     'wordle': 110,
     'nerdle': 110,
     'worldle': 110,
-    'wikitrivia': 12,
     'rgble': 30, // 3 tur × 10
     'sound': 40, // 4 tur × 10
     'timele': 40,

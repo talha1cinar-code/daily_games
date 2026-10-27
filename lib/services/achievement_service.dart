@@ -61,6 +61,19 @@ class AchievementService extends ChangeNotifier {
         'Mirrorle\'ı kusursuz bitir', 'Finish Mirrorle flawlessly'),
     Achievement('friend', Icons.group_add_rounded, 'Sosyal', 'Social',
         'İlk arkadaşını ekle', 'Add your first friend'),
+    // Düello
+    Achievement('duel_first_win', Icons.sports_kabaddi_rounded, 'İlk Zafer', 'First Victory',
+        'İlk düellonu kazan', 'Win your first duel'),
+    Achievement('duel_wins_10', Icons.shield_rounded, 'Gladyatör', 'Gladiator',
+        '10 düello kazan', 'Win 10 duels'),
+    Achievement('duel_streak_3', Icons.trending_up_rounded, 'Yenilmez', 'Unstoppable',
+        '3 düelloyu üst üste kazan', 'Win 3 duels in a row'),
+    Achievement('duel_sweep', Icons.cleaning_services_rounded, 'Silindir', 'Steamroller',
+        'Bir düelloda 3 turu da kazan', 'Win all 3 rounds of a duel'),
+    Achievement('duel_gold', Icons.emoji_events_rounded, 'Altın Lig', 'Gold League',
+        'Düelloda Altın lige yüksel', 'Reach the Gold duel league'),
+    Achievement('duel_friend', Icons.handshake_rounded, 'Dostluk Maçı', 'Friendly Match',
+        'Bir arkadaşınla düello bitir', 'Finish a duel with a friend'),
   ];
 
   static const Map<String, (String, double)> _scoreGoals = {
@@ -75,6 +88,7 @@ class AchievementService extends ChangeNotifier {
 
   static const String _prefix = 'ach_';
   static const String _runsKey = 'ach_runs_completed';
+  static const String _duelStreakKey = 'ach_duel_win_streak';
   SharedPreferences? _prefs;
 
   Future<void> init() async {
@@ -112,6 +126,24 @@ class AchievementService extends ChangeNotifier {
   }
 
   void onFriendAdded() => _unlock('friend');
+
+  /// Biten her düello için bir kez çağrılır
+  void onDuelFinished({
+    required bool won,
+    required bool sweep,
+    required int totalWins,
+    required int trophies,
+    required bool vsFriend,
+  }) {
+    final streak = won ? (_prefs?.getInt(_duelStreakKey) ?? 0) + 1 : 0;
+    _prefs?.setInt(_duelStreakKey, streak);
+    if (won) _unlock('duel_first_win');
+    if (totalWins >= 10) _unlock('duel_wins_10');
+    if (streak >= 3) _unlock('duel_streak_3');
+    if (won && sweep) _unlock('duel_sweep');
+    if (trophies >= 400) _unlock('duel_gold');
+    if (vsFriend) _unlock('duel_friend');
+  }
 
   void _unlock(String id) {
     if (_prefs == null || isUnlocked(id)) return;

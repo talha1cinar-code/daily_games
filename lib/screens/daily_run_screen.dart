@@ -28,8 +28,7 @@ class DailyRunScreen extends StatefulWidget {
   State<DailyRunScreen> createState() => _DailyRunScreenState();
 }
 
-class _DailyRunScreenState extends State<DailyRunScreen>
-    with TickerProviderStateMixin {
+class _DailyRunScreenState extends State<DailyRunScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   late AnimationController _slideController;
@@ -40,23 +39,11 @@ class _DailyRunScreenState extends State<DailyRunScreen>
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    );
+    _fadeController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
+    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
 
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    _slideAnimation = CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutBack,
-    );
+    _slideController = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
+    _slideAnimation = CurvedAnimation(parent: _slideController, curve: Curves.easeOutBack);
 
     _fadeController.forward();
     Future.delayed(const Duration(milliseconds: 200), () {
@@ -83,7 +70,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
     } else {
       nextReset = DateTime.utc(now.year, now.month, now.day + 1, 0);
     }
-    
+
     if (mounted) {
       setState(() {
         _timeLeft = nextReset.difference(now);
@@ -108,32 +95,32 @@ class _DailyRunScreenState extends State<DailyRunScreen>
 
     Navigator.of(context)
         .push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => screen,
-        transitionDuration: Duration.zero,
-        reverseTransitionDuration: Duration.zero,
-      ),
-    )
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => screen,
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+          ),
+        )
         .then((_) async {
-      if (mounted) {
-        SoundService().exitMiniGame();
-        setState(() {});
-        await maybeShowStreakCelebration(context);
-        if (!mounted) return;
+          if (mounted) {
+            SoundService().exitMiniGame();
+            setState(() {});
+            await maybeShowStreakCelebration(context);
+            if (!mounted) return;
 
-        final progress = DailyRunService().getProgress();
-        if (progress.isCompleted) {
-          AdService().showInterstitialAd(
-            onAdClosed: () {
-              if (mounted) _showCompletionDialog();
+            final progress = DailyRunService().getProgress();
+            if (progress.isCompleted) {
+              AdService().showInterstitialAd(
+                onAdClosed: () {
+                  if (mounted) _showCompletionDialog();
+                },
+              );
+            } else if (progress.currentGameIndex == (DailyRunService.gamesPerRun / 2).ceil()) {
+              // Run'ın ortasında bir kez reklam göster
+              AdService().showInterstitialAd();
             }
-          );
-        } else if (progress.currentGameIndex == (DailyRunService.gamesPerRun / 2).ceil()) {
-          // Run'ın ortasında bir kez reklam göster
-          AdService().showInterstitialAd();
-        }
-      }
-    });
+          }
+        });
   }
 
   Widget _buildGameScreen(String gameId) {
@@ -148,10 +135,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => LeaderboardScreen(
-          gameId: gameId,
-          gameName: gameName,
-        ),
+        pageBuilder: (context, animation, secondaryAnimation) => LeaderboardScreen(gameId: gameId, gameName: gameName),
         transitionDuration: Duration.zero,
         reverseTransitionDuration: Duration.zero,
       ),
@@ -165,10 +149,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => LeaderboardScreen(
-          gameId: gameId,
-          gameName: name,
-        ),
+        pageBuilder: (context, animation, secondaryAnimation) => LeaderboardScreen(gameId: gameId, gameName: name),
         transitionDuration: Duration.zero,
         reverseTransitionDuration: Duration.zero,
       ),
@@ -281,10 +262,7 @@ class _DailyRunScreenState extends State<DailyRunScreen>
                     ),
                   ),
                   Expanded(
-                    child: FadeTransition(
-                      opacity: _slideAnimation,
-                      child: _buildPathLayout(progress),
-                    ),
+                    child: FadeTransition(opacity: _slideAnimation, child: _buildPathLayout(progress)),
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
@@ -357,8 +335,8 @@ class _DailyRunScreenState extends State<DailyRunScreen>
                   child: isCurrent
                       ? _buildCurrentNode(gameId)
                       : isCompleted
-                          ? _buildCompletedNode(gameId, progress.scores[gameId]!)
-                          : _buildLockedNode(gameId),
+                      ? _buildCompletedNode(gameId, progress.scores[gameId]!)
+                      : _buildLockedNode(gameId),
                 ),
               );
             }),
@@ -404,7 +382,10 @@ class _DailyRunScreenState extends State<DailyRunScreen>
         color: bg ?? Colors.black.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Text(text, style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w900, color: color)),
+      child: Text(
+        text,
+        style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w900, color: color),
+      ),
     );
   }
 
@@ -513,10 +494,7 @@ class _TargetBarState extends State<_TargetBar> {
   /// toplamlar (run başına 100'den büyük ortalama) hedef olarak kullanılmaz.
   double? get _personalBest {
     final max = DailyRunService.gamesPerRun * 100.0;
-    final scores = StatsService()
-        .getStats('daily_run')
-        .map((s) => s.score)
-        .where((v) => v > 0 && v <= max);
+    final scores = StatsService().getStats('daily_run').map((s) => s.score).where((v) => v > 0 && v <= max);
     if (scores.isEmpty) return null;
     return scores.reduce((a, b) => a > b ? a : b);
   }
@@ -525,26 +503,23 @@ class _TargetBarState extends State<_TargetBar> {
   Widget build(BuildContext context) {
     final total = widget.progress.scores.values.fold(0.0, (a, b) => a + b);
     final best = _personalBest;
-    final String? who;
-    final double? target;
-    if (_friendScore != null) {
-      who = _friendName;
-      target = _friendScore;
-    } else if (best != null) {
-      who = AppStrings.yourLastRun;
-      target = best;
-    } else {
-      who = null;
-      target = null;
-    }
+    // Arkadaş bugün oynadıysa onun skoru, yoksa kendi rekorun hedeftir
+    final String? who = _friendScore != null ? _friendName : null;
+    final double? target = _friendScore ?? best;
     final beaten = target != null && total > target;
+    String? label;
+    if (target != null) {
+      final t = target.toStringAsFixed(0);
+      if (who != null) {
+        label = beaten ? AppStrings.targetBeaten(who) : AppStrings.targetToBeat(who, t);
+      } else {
+        label = beaten ? AppStrings.newBest : AppStrings.myBestToBeat(t);
+      }
+    }
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(20),
-      ),
+      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.25), borderRadius: BorderRadius.circular(20)),
       child: Column(
         children: [
           Row(
@@ -561,10 +536,10 @@ class _TargetBarState extends State<_TargetBar> {
                 style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white54),
               ),
               const Spacer(),
-              if (target != null)
+              if (label != null)
                 Flexible(
                   child: Text(
-                    beaten ? AppStrings.targetBeaten(who!) : AppStrings.targetToBeat(who!, target.toStringAsFixed(0)),
+                    label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.nunito(
@@ -606,22 +581,19 @@ class _PulseNodeState extends State<_PulseNode> with SingleTickerProviderStateMi
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat(reverse: true);
   }
+
   @override
   void dispose() {
     _ctrl.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return ScaleTransition(
-      scale: Tween<double>(begin: 1.0, end: 1.06).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
-      ),
+      scale: Tween<double>(begin: 1.0, end: 1.06).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut)),
       child: widget.child,
     );
   }
@@ -632,11 +604,7 @@ class PathPainter extends CustomPainter {
   final double nodeHeight;
   final int completedCount;
 
-  PathPainter({
-    required this.totalNodes,
-    required this.nodeHeight,
-    required this.completedCount,
-  });
+  PathPainter({required this.totalNodes, required this.nodeHeight, required this.completedCount});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -661,17 +629,17 @@ class PathPainter extends CustomPainter {
         final prevXAlign = math.sin((i - 1) * math.pi / 2.5) * 0.6;
         final prevX = (size.width / 2) + (prevXAlign * (size.width / 2));
         final prevY = (i - 1) * nodeHeight + (nodeHeight / 2);
-        
+
         final cpY = (prevY + y) / 2;
-        
+
         path.quadraticBezierTo(prevX, cpY, x, y);
-        
+
         if (i <= completedCount) {
           completedPath.quadraticBezierTo(prevX, cpY, x, y);
         }
       }
     }
-    
+
     canvas.drawPath(path, paint);
 
     for (int i = 1; i <= 3; i++) {
@@ -684,13 +652,13 @@ class PathPainter extends CustomPainter {
           ..strokeCap = StrokeCap.round,
       );
     }
-    
+
     final completedPaint = Paint()
       ..color = Colors.greenAccent
       ..style = PaintingStyle.stroke
       ..strokeWidth = 6
       ..strokeCap = StrokeCap.round;
-      
+
     canvas.drawPath(completedPath, completedPaint);
   }
 
@@ -722,9 +690,7 @@ class _RunCompleteDialogState extends State<_RunCompleteDialog> {
   @override
   void initState() {
     super.initState();
-    LeaderboardService()
-        .getStanding(_runId, _total, _p.totalDurationMs, _p.dateKey)
-        .then((s) {
+    LeaderboardService().getStanding(_runId, _total, _p.totalDurationMs, _p.dateKey).then((s) {
       if (!mounted) return;
       setState(() {
         _standing = s;
@@ -733,9 +699,7 @@ class _RunCompleteDialogState extends State<_RunCompleteDialog> {
     });
   }
 
-  String get _grid => [
-        for (final id in _p.gameOrder) ScoreScale.emoji(_p.scores[id] ?? 0),
-      ].join();
+  String get _grid => [for (final id in _p.gameOrder) ScoreScale.emoji(_p.scores[id] ?? 0)].join();
 
   String? get _standingText {
     final s = _standing;
@@ -767,9 +731,10 @@ class _RunCompleteDialogState extends State<_RunCompleteDialog> {
     final streak = StreakService();
     return AlertDialog(
       scrollable: true,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: const Color(0xFF1B1B2F),
-      contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+      contentPadding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -785,23 +750,35 @@ class _RunCompleteDialogState extends State<_RunCompleteDialog> {
             curve: Curves.easeOutCubic,
             builder: (context, v, _) => Text(
               v.toStringAsFixed(0),
-              style: GoogleFonts.nunito(fontSize: 52, fontWeight: FontWeight.w900, color: Colors.amberAccent, height: 1),
+              style: GoogleFonts.nunito(
+                fontSize: 52,
+                fontWeight: FontWeight.w900,
+                color: Colors.amberAccent,
+                height: 1,
+              ),
             ),
           ),
           Text(
             '${AppStrings.totalScore} · ${_p.gameOrder.length * 100} ${AppStrings.outOf}',
+            textAlign: TextAlign.center,
             style: GoogleFonts.nunito(fontSize: 13, color: Colors.white54),
           ),
           const SizedBox(height: 16),
-          Text(_grid, style: const TextStyle(fontSize: 24, letterSpacing: 2)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(_grid, style: const TextStyle(fontSize: 24, letterSpacing: 2)),
+          ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 22,
+            height: 24,
             child: _loadingStanding
                 ? const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))
-                : Text(
-                    _standingText ?? '',
-                    style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.greenAccent),
+                : FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _standingText ?? '',
+                      style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.greenAccent),
+                    ),
                   ),
           ),
           if (streak.lastRunExtendedStreak) ...[
@@ -853,15 +830,19 @@ class _RunCompleteDialogState extends State<_RunCompleteDialog> {
               Expanded(
                 child: TextButton(
                   onPressed: widget.onRanking,
-                  child: Text(AppStrings.ranking,
-                      style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white70)),
+                  child: Text(
+                    AppStrings.ranking,
+                    style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white70),
+                  ),
                 ),
               ),
               Expanded(
                 child: TextButton(
                   onPressed: widget.onHome,
-                  child: Text(AppStrings.homePage,
-                      style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white70)),
+                  child: Text(
+                    AppStrings.homePage,
+                    style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white70),
+                  ),
                 ),
               ),
             ],
@@ -882,10 +863,7 @@ class _RunChest extends StatefulWidget {
 }
 
 class _RunChestState extends State<_RunChest> with SingleTickerProviderStateMixin {
-  late final AnimationController _shake = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 600),
-  );
+  late final AnimationController _shake = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
   int? _earned;
   bool _opening = false;
 
@@ -916,16 +894,18 @@ class _RunChestState extends State<_RunChest> with SingleTickerProviderStateMixi
 
   void _double() {
     if (!AdService().isRewardedReady) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(behavior: SnackBarBehavior.floating, content: Text(AppStrings.adNotReady)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text(AppStrings.adNotReady)));
       return;
     }
-    AdService().showRewardedAd(onUserEarnedReward: () async {
-      final extra = await DailyRunService().doubleChest(_p);
-      SoundService().playCoin();
-      if (mounted) setState(() => _earned = (_earned ?? 0) + extra);
-    });
+    AdService().showRewardedAd(
+      onUserEarnedReward: () async {
+        final extra = await DailyRunService().doubleChest(_p);
+        SoundService().playCoin();
+        if (mounted) setState(() => _earned = (_earned ?? 0) + extra);
+      },
+    );
   }
 
   @override
@@ -933,7 +913,7 @@ class _RunChestState extends State<_RunChest> with SingleTickerProviderStateMixi
     final opened = _earned != null;
     final canDouble = opened && !DailyRunService().isChestDoubled(_p);
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFFFFB627).withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(18),
@@ -949,58 +929,73 @@ class _RunChestState extends State<_RunChest> with SingleTickerProviderStateMixi
             child: Icon(
               opened ? Icons.inventory_2_outlined : Icons.inventory_2_rounded,
               color: const Color(0xFFFFC233),
-              size: 44,
+              size: 40,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
+          // Dar ekranda yazı küçülür, taşmaz
           Expanded(
-            child: opened
-                ? Row(
-                    children: [
-                      const CoinIcon(size: 26),
-                      const SizedBox(width: 6),
-                      Text(
-                        '+$_earned',
-                        style: GoogleFonts.nunito(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
-                      ),
-                    ],
-                  )
-                : Text(
-                    AppStrings.runChest,
-                    style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white),
-                  ),
-          ),
-          SizedBox(
-            width: 120,
-            child: !opened
-                ? ChunkyButton(
-                    face: const Color(0xFF3DDC84),
-                    lip: const Color(0xFF1E9E55),
-                    height: 42,
-                    radius: 14,
-                    onTap: _opening ? null : _open,
-                    child: Text(AppStrings.openChest,
-                        style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white)),
-                  )
-                : canDouble
-                    ? ChunkyButton(
-                        face: const Color(0xFF4F8BFF),
-                        lip: const Color(0xFF2E5BC4),
-                        height: 42,
-                        radius: 14,
-                        onTap: _double,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.smart_display_rounded, color: Colors.white, size: 18),
-                            const SizedBox(width: 4),
-                            Text('x2',
-                                style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
-                          ],
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: opened
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CoinIcon(size: 26),
+                        const SizedBox(width: 6),
+                        Text(
+                          '+$_earned',
+                          style: GoogleFonts.nunito(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
                         ),
-                      )
-                    : const SizedBox(),
+                      ],
+                    )
+                  : Text(
+                      AppStrings.runChest,
+                      style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white),
+                    ),
+            ),
           ),
+          if (!opened || canDouble) const SizedBox(width: 8),
+          if (!opened || canDouble)
+            SizedBox(
+              width: 108,
+              child: !opened
+                  ? ChunkyButton(
+                      face: const Color(0xFF3DDC84),
+                      lip: const Color(0xFF1E9E55),
+                      height: 42,
+                      radius: 14,
+                      onTap: _opening ? null : _open,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          AppStrings.openChest,
+                          style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white),
+                        ),
+                      ),
+                    )
+                  : canDouble
+                  ? ChunkyButton(
+                      face: const Color(0xFF4F8BFF),
+                      lip: const Color(0xFF2E5BC4),
+                      height: 42,
+                      radius: 14,
+                      onTap: _double,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.smart_display_rounded, color: Colors.white, size: 18),
+                          const SizedBox(width: 4),
+                          Text(
+                            'x2',
+                            style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox(),
+            ),
         ],
       ),
     );
