@@ -72,7 +72,7 @@ void main() {
     expect(DuelLeague.of(150).nameTr, 'Gümüş');
     expect(DuelLeague.of(5000).nameTr, 'Usta');
     expect(DuelLeague.next(5000), isNull);
-    expect(DuelRewards.of(DuelResult.win), (30, 40));
+    expect(DuelRewards.of(DuelResult.win), (DuelRewards.winTrophies, DuelRewards.winCoins));
     expect(DuelRewards.of(DuelResult.loss).$1, lessThan(0));
   });
 

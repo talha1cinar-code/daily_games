@@ -101,8 +101,6 @@ class AppStrings {
   static String get howToEarn => _lang == 'tr' ? 'Coin nasıl kazanılır?' : 'How to earn coins';
   static String get earnPlay => _lang == 'tr' ? 'Her bitirdiğin oyun: 5-10 coin' : 'Every game you finish: 5-10 coins';
   static String get earnChest => _lang == 'tr' ? 'Daily Run sandığı: 20-90 coin' : 'Daily Run chest: 20-90 coins';
-  static String get earnDaily => _lang == 'tr' ? 'Günlük ödül: 10-100 coin' : 'Daily reward: 10-100 coins';
-  static String get earnBadges => _lang == 'tr' ? 'Her rozet: 50 coin' : 'Each badge: 50 coins';
   static String get editLook => _lang == 'tr' ? 'Görünümü düzenle' : 'Edit look';
   static String get purchased => _lang == 'tr' ? 'Satın alındı ve kullanılıyor!' : 'Bought and equipped!';
   static String get previewing => _lang == 'tr' ? 'ÖNİZLEME' : 'PREVIEW';
@@ -354,6 +352,7 @@ class AppStrings {
   static String get days => _lang == 'tr' ? 'Gün' : 'Days';
   static String get streakZero => _lang == 'tr' ? 'Hemen seriye başla!' : 'Start your streak now!';
   static String get streakLow => _lang == 'tr' ? 'İyi başlangıç!' : 'Good start!';
+  static String get newFlameTier => _lang == 'tr' ? 'Yeni alev' : 'New flame';
   static String get streakMedium => _lang == 'tr' ? 'Ateş ediyorsun!' : 'You are on fire!';
   static String get streakHigh => _lang == 'tr' ? 'Durdurulamazsın!' : 'Unstoppable!';
   static String get streakSuper => _lang == 'tr' ? 'Bir efsanesin!' : 'You are a legend!';

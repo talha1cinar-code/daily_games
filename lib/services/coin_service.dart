@@ -14,16 +14,18 @@ class CoinService extends ChangeNotifier {
 
   // ─── Ödüller ve fiyatlar ─────────────────────────────────────────
   static const int startingCoins = 50;
-  static const int adReward = 50;
-  static const int achievementReward = 50;
-  static const int gameRewardBase = 5;
-  static const int gameRewardMax = 10;
+  // Kazanç: düzenli oynayan biri günde ~150-180 coin toplar
+  static const int adReward = 25;
+  static const int achievementReward = 30;
+  static const int gameRewardBase = 3;
+  static const int gameRewardMax = 6;
+  // Oyun içi kullanımlar uygun kalır, kozmetikler emek ister (avatar ~1 hafta)
   static const int ticketRefillPrice = 60;
-  static const int freezePrice = 240;
+  static const int freezePrice = 300;
   static const int hintPrice = 50;
   static const int extraLifePrice = 80;
-  static const int avatarPrice = 300;
-  static const int emojiPrice = 120;
+  static const int avatarPrice = 1200;
+  static const int emojiPrice = 500;
 
   /// Çizilmiş karakterler emojilerden pahalı
   static int priceOfAvatar(String avatar) => avatar.startsWith(AvatarService.imagePrefix) ? avatarPrice : emojiPrice;

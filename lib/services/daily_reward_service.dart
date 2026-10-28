@@ -10,7 +10,7 @@ class DailyRewardService extends ChangeNotifier {
   factory DailyRewardService() => _instance;
   DailyRewardService._internal();
 
-  static const List<int> rewards = [10, 15, 20, 25, 30, 40, 100];
+  static const List<int> rewards = [5, 10, 10, 15, 15, 20, 50];
   static const String _lastKey = 'daily_reward_last';
   static const String _dayKey = 'daily_reward_day';
 

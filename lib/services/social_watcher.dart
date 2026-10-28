@@ -12,13 +12,18 @@ import 'notification_service.dart';
 
 /// Düello ve arkadaş olaylarını bildirime çevirir. Sunucu (Cloud Functions) olmadan çalışır:
 ///   - uygulama açıkken/arka plandayken Firestore dinleyicilerinden anında,
-///   - uygulama kapalıyken WorkManager ile ~30 dakikada bir kontrol ederek.
+///   - uygulama kapalıyken WorkManager ile ~60 dakikada bir kontrol ederek.
 /// İki yol da aynı "son görülen durum"u kullanır; aynı olay iki kez bildirilmez.
 class SocialWatcher {
   static const String _duelStateKey = 'social_duel_state'; // {duelId: "rakipTur|bitti"}
   static const String _friendSeenKey = 'social_friend_seen';
   static const String _lastCheckKey = 'social_last_check_ms';
   static const String _taskName = 'social_check';
+  static const Duration _every = Duration(minutes: 60);
+
+  /// Uygulama bu süre içinde açıksa canlı dinleyiciler değişiklikleri zaten almıştır;
+  /// arka plan kontrolü boşuna okuma yapmaz
+  static const Duration _skipIfSeenWithin = Duration(minutes: 50);
 
   /// Uygulama ön plandaysa bildirim yerine uygulama içi gösterim yeterli
   static bool get _appVisible => WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
@@ -112,9 +117,10 @@ class SocialWatcher {
       await Workmanager().registerPeriodicTask(
         _taskName,
         _taskName,
-        frequency: const Duration(minutes: 30),
+        frequency: _every,
         constraints: Constraints(networkType: NetworkType.connected),
-        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+        // Eski 30 dakikalık görev 60 dakikalıkla değişsin
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
       );
     } catch (e) {
       debugPrint('SocialWatcher register error: $e');
@@ -132,9 +138,11 @@ class SocialWatcher {
     await LanguageService().init();
     await NotificationService().init();
 
-    final db = FirebaseFirestore.instance;
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    final since = prefs.getInt(_lastCheckKey) ?? nowMs - const Duration(hours: 1).inMilliseconds;
+    final last = prefs.getInt(_lastCheckKey);
+    if (last != null && nowMs - last < _skipIfSeenWithin.inMilliseconds) return;
+    final since = last ?? nowMs - const Duration(hours: 1).inMilliseconds;
+    final db = FirebaseFirestore.instance;
 
     final changed = await db
         .collection('duels')

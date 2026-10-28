@@ -329,7 +329,7 @@ class DailyRunService extends ChangeNotifier {
   /// Skora göre sandık ödülü: 20 taban + her 10 puan için 1 coin
   static int chestReward(DailyRunProgress p) {
     final total = p.scores.values.fold(0.0, (a, b) => a + b);
-    return 20 + total ~/ 10;
+    return 10 + total ~/ 25; // 700 puanlık koşuda en fazla 38
   }
 
   String _chestKey(DailyRunProgress p, String suffix) => 'chest_${p.dateKey}_${p.runSlot}_$suffix';

@@ -170,7 +170,7 @@ class DuelLeague {
 /// Düello ödülleri
 class DuelRewards {
   static const int winTrophies = 30, drawTrophies = 10, lossTrophies = -15;
-  static const int winCoins = 40, drawCoins = 15, lossCoins = 5;
+  static const int winCoins = 20, drawCoins = 8, lossCoins = 3;
 
   static (int trophies, int coins) of(DuelResult r) => switch (r) {
         DuelResult.win => (winTrophies, winCoins),

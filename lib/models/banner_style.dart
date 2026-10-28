@@ -22,18 +22,18 @@ class BannerStyle {
 
   static const List<BannerStyle> all = [
     BannerStyle(none, 'Sade', 'Plain', 0, Color(0xFF2A2550)),
-    BannerStyle('ocean', 'Okyanus', 'Ocean', 300, Color(0xFF2E9FD6)),
-    BannerStyle('forest', 'Orman', 'Forest', 300, Color(0xFF3E9A68)),
-    BannerStyle('desert', 'Çöl', 'Desert', 300, Color(0xFFE08A3C)),
-    BannerStyle('candy', 'Şeker', 'Candy', 300, Color(0xFFFFB3DE)),
-    BannerStyle('city', 'Gece Şehri', 'Night City', 400, Color(0xFF24204F)),
-    BannerStyle('sakura', 'Sakura', 'Sakura', 400, Color(0xFFFFC2DA)),
-    BannerStyle('synthwave', 'Synthwave', 'Synthwave', 500, Color(0xFF8A2A7A)),
-    BannerStyle('lava', 'Lav', 'Lava', 500, Color(0xFF3A0E08)),
-    BannerStyle('circuit', 'Devre', 'Circuit', 500, Color(0xFF04232A)),
-    BannerStyle('aurora', 'Kutup Işığı', 'Aurora', 600, Color(0xFF0B2E4A)),
-    BannerStyle('space', 'Uzay', 'Space', 600, Color(0xFF1B0F44)),
-    BannerStyle('gold', 'Altın', 'Gold', 1000, Color(0xFF2A1A05)),
+    BannerStyle('ocean', 'Okyanus', 'Ocean', 1000, Color(0xFF2E9FD6)),
+    BannerStyle('forest', 'Orman', 'Forest', 1000, Color(0xFF3E9A68)),
+    BannerStyle('desert', 'Çöl', 'Desert', 1000, Color(0xFFE08A3C)),
+    BannerStyle('candy', 'Şeker', 'Candy', 1000, Color(0xFFFFB3DE)),
+    BannerStyle('city', 'Gece Şehri', 'Night City', 1500, Color(0xFF24204F)),
+    BannerStyle('sakura', 'Sakura', 'Sakura', 1500, Color(0xFFFFC2DA)),
+    BannerStyle('synthwave', 'Synthwave', 'Synthwave', 2000, Color(0xFF8A2A7A)),
+    BannerStyle('lava', 'Lav', 'Lava', 2000, Color(0xFF3A0E08)),
+    BannerStyle('circuit', 'Devre', 'Circuit', 2000, Color(0xFF04232A)),
+    BannerStyle('aurora', 'Kutup Işığı', 'Aurora', 2500, Color(0xFF0B2E4A)),
+    BannerStyle('space', 'Uzay', 'Space', 2500, Color(0xFF1B0F44)),
+    BannerStyle('gold', 'Altın', 'Gold', 5000, Color(0xFF2A1A05)),
   ];
 
   /// Önceki sürümdeki gradyan banner kimlikleri → yeni karşılıkları

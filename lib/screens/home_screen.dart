@@ -12,6 +12,7 @@ import 'daily_run_screen.dart';
 import '../services/daily_run_service.dart';
 import '../services/leaderboard_service.dart';
 import '../services/streak_service.dart';
+import '../widgets/streak_style.dart';
 import '../services/ad_service.dart';
 import 'leaderboard_screen.dart';
 import '../utils/network_utils.dart';
@@ -754,11 +755,7 @@ class _HudState extends State<_Hud> {
             children: [
               AvatarView(avatar: LeaderboardService().avatar, size: 34),
               const SizedBox(width: 10),
-              Icon(
-                frozen ? Icons.ac_unit_rounded : Icons.local_fire_department_rounded,
-                color: frozen ? const Color(0xFF6FD6FF) : const Color(0xFFFF7A2F),
-                size: 24,
-              ),
+              StreakFlame(streak: streak, frozen: frozen, size: 24, animate: false),
               const SizedBox(width: 2),
               Text(
                 '$streak',

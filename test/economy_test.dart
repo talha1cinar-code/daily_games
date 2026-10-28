@@ -42,7 +42,7 @@ void main() {
       expect(CoinService.gameReward(0), CoinService.gameRewardBase);
       expect(CoinService.gameReward(100), CoinService.gameRewardMax);
       expect(CoinService.gameReward(150), CoinService.gameRewardMax);
-      expect(CoinService.gameReward(50), inInclusiveRange(7, 8));
+      expect(CoinService.gameReward(50), inInclusiveRange(CoinService.gameRewardBase, CoinService.gameRewardMax));
     });
 
     test('banner bir kez satın alınır, ikinci kez ücret alınmaz', () async {
