@@ -23,6 +23,7 @@ class CoinService extends ChangeNotifier {
   static const int ticketRefillPrice = 60;
   static const int freezePrice = 300;
   static const int hintPrice = 50;
+  static const int replayPrice = 30;
   static const int extraLifePrice = 80;
   static const int avatarPrice = 1200;
   static const int emojiPrice = 500;

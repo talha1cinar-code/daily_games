@@ -250,6 +250,15 @@ class _MemorleScreenState extends State<MemorleScreen>
 
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
+      if (_level >= _maxLevel) {
+        setState(() {
+          _level++;
+          _isGameOver = true;
+        });
+        _saveScore();
+        _showGameOverDialog();
+        return;
+      }
       setState(() {
         _level++;
         _phase = _GamePhase.ready;
@@ -279,15 +288,13 @@ class _MemorleScreenState extends State<MemorleScreen>
   }
 
   // ─── Puan hesaplama ──────────────────────────────────────────────
-  int _getLevelScore() {
-    final digits = _getDigitCount();
-    // Basamak sayısı * 10 + hız bonusu
-    final speedBonus = (650 - _getDigitShowDuration()) ~/ 10;
-    return digits * 10 + speedBonus;
-  }
+  /// Her seviye 10 puan; 10 seviye bitince oyun 100 puanla biter
+  static const int _maxLevel = 10;
+  int _getLevelScore() => 10;
 
   // ─── Skor kaydetme ────────────────────────────────────────────
   void _saveScore() {
+    _sound.playGameEnd(_score.toDouble());
     final durationMs =
         DateTime.now().difference(_gameStartTime!).inMilliseconds;
 
@@ -349,16 +356,16 @@ class _MemorleScreenState extends State<MemorleScreen>
   }
 
   Widget _buildResultSheet() {
-    final emoji = _score >= 400
+    final emoji = _score >= 70
         ? '🧠'
-        : _score >= 200
+        : _score >= 50
             ? '⭐'
-            : _score >= 100
+            : _score >= 30
                 ? '👍'
                 : '😅';
-    final title = _score >= 200 ? (LanguageService().currentLanguage == 'tr' ? 'Müthiş Hafıza!' : 'Amazing Memory!') : (LanguageService().currentLanguage == 'tr' ? 'Oyun Bitti!' : 'Game Over!');
+    final title = _score >= 50 ? (LanguageService().currentLanguage == 'tr' ? 'Müthiş Hafıza!' : 'Amazing Memory!') : (LanguageService().currentLanguage == 'tr' ? 'Oyun Bitti!' : 'Game Over!');
     final titleColor =
-        _score >= 200 ? Colors.cyanAccent : Colors.orangeAccent;
+        _score >= 50 ? Colors.cyanAccent : Colors.orangeAccent;
 
     return Container(
       decoration: BoxDecoration(
@@ -367,7 +374,7 @@ class _MemorleScreenState extends State<MemorleScreen>
           end: Alignment.bottomCenter,
           colors: [
             const Color(0xFF1A1A2E),
-            _score >= 200
+            _score >= 50
                 ? const Color(0xFF0A1E2E)
                 : const Color(0xFF2E1A0A),
           ],

@@ -261,6 +261,7 @@ class _ReactleScreenState extends State<ReactleScreen>
     final durationMs =
         DateTime.now().difference(_gameStartTime!).inMilliseconds;
     final score = _calculateScore();
+    _sound.playGameEnd(score);
 
     if (widget.onGameComplete != null) {
       final lbScore = LeaderboardService.calculateLeaderboardScore(

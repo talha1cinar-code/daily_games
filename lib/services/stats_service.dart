@@ -59,7 +59,9 @@ class StatsService extends ChangeNotifier {
     _prefs = await SharedPreferences.getInstance();
   }
 
-  /// Günlük oyun sonucunu kaydeder.
+  /// Günlük oyun sonucunu kaydeder. [dateKey] verilirse sonuç o güne yazılır ve
+  /// yalnızca aynı günün aynı [targetValue] kaydının üzerine yazar (sabah ve akşam
+  /// koşuları aynı güne ait olabilir).
   Future<void> saveDailyStat({
     required String gameId,
     required bool isWin,
@@ -68,16 +70,18 @@ class StatsService extends ChangeNotifier {
     double score = 0.0,
     String? targetValue,
     int? durationMs,
+    String? dateKey,
   }) async {
     if (_prefs == null) return;
     
     final stats = getStats(gameId);
     
     final now = DateTime.now();
-    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final todayStr =
+        dateKey ?? '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     
     // Zaten varsa (aynı gün) üzerine yaz (eğer ki çoklu oynanma olursa diye ama günlük tek olmalı)
-    stats.removeWhere((s) => s.date == todayStr);
+    stats.removeWhere((s) => s.date == todayStr && (dateKey == null || s.targetValue == targetValue));
     
     stats.add(GameStat(
       date: todayStr,
@@ -93,6 +97,29 @@ class StatsService extends ChangeNotifier {
     final jsonList = stats.map((s) => s.toJson()).toList();
     await _prefs!.setString(key, jsonEncode(jsonList));
     
+    notifyListeners();
+  }
+
+  /// Yanlış güne yazılmış bir kaydı doğru güne taşır. O günde aynı kayıt zaten varsa
+  /// yanlış olan silinir.
+  Future<void> moveStatDate(String gameId, String from, String to, String? targetValue) async {
+    if (_prefs == null) return;
+    final stats = getStats(gameId);
+    final i = stats.indexWhere((s) => s.date == from && s.targetValue == targetValue);
+    if (i < 0) return;
+    final s = stats.removeAt(i);
+    if (!stats.any((o) => o.date == to && o.targetValue == targetValue)) {
+      stats.add(GameStat(
+        date: to,
+        isWin: s.isWin,
+        attempts: s.attempts,
+        maxAttempts: s.maxAttempts,
+        score: s.score,
+        targetValue: s.targetValue,
+        durationMs: s.durationMs,
+      ));
+    }
+    await _prefs!.setString('$_prefsKeyPrefix$gameId', jsonEncode(stats.map((e) => e.toJson()).toList()));
     notifyListeners();
   }
 

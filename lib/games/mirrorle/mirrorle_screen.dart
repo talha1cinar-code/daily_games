@@ -108,6 +108,7 @@ class _MirrorleScreenState extends State<MirrorleScreen> with SingleTickerProvid
     _stopwatch.stop();
     final durationMs = _stopwatch.elapsedMilliseconds;
     final score = _total;
+    _sound.playGameEnd(score);
     _saveScore(score, durationMs);
     final flawless = _roundScores.where((s) => s >= MirrorleGame.maxRoundScore).length;
     final secs = (durationMs / 1000).round();

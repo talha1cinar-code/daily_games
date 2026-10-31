@@ -13,7 +13,7 @@ class _LogoBackgroundState extends State<LogoBackground> with SingleTickerProvid
   
   final List<String> logos = [
     'assets/images/icons/wordle.png',
-    'assets/images/icons/worldle.png',
+    'assets/images/icons/fitle.png',
     'assets/images/icons/huedle.png',
     'assets/images/icons/timele.png',
     'assets/images/icons/sound.png',
@@ -21,7 +21,7 @@ class _LogoBackgroundState extends State<LogoBackground> with SingleTickerProvid
     'assets/images/icons/reactle.png',
     'assets/images/icons/nerdle.png',
     'assets/images/icons/memorle.png',
-    'assets/images/icons/wikitrivia.png',
+    'assets/images/icons/tempole.png',
     'assets/images/icons/quickle.png',
     'assets/images/icons/slicele.png',
     'assets/images/icons/stackle.png',

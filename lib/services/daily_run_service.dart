@@ -35,10 +35,10 @@ class DailyRunService extends ChangeNotifier {
   /// Daily Run'a girebilecek oyunlar
   static const List<String> gamePool = [
     'wordle',
-    'wikitrivia',
+    'tempole',
     'rgble',
     'nerdle',
-    'worldle',
+    'fitle',
     'sound',
     'memorle',
     'huedle',
@@ -75,10 +75,10 @@ class DailyRunService extends ChangeNotifier {
   /// Oyun isimlerinin görüntüleme adları
   static const Map<String, String> gameDisplayNames = {
     'wordle': 'Wordle',
-    'wikitrivia': 'Wikitrivia',
+    'tempole': 'Tempole',
     'rgble': 'RGBle',
     'nerdle': 'Nerdle',
-    'worldle': 'Worldle',
+    'fitle': 'Fitle',
     'sound': 'Sound',
     'memorle': 'Memorle',
     'huedle': 'Huedle',
@@ -102,7 +102,38 @@ class DailyRunService extends ChangeNotifier {
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    await _repairMisdatedRuns();
     _checkAndProcessActiveRun();
+  }
+
+  /// Eski sürümler süresi dolan yarım koşuyu kapandığı güne yazıyordu. Kayıtları
+  /// koşunun kendi verisiyle eşleştirip gerçek gününe bir kez taşır.
+  Future<void> _repairMisdatedRuns() async {
+    const flag = 'run_dates_repaired_v1';
+    if (_prefs!.getBool(flag) ?? false) return;
+
+    final runKey = RegExp('^$_prefsKeyPrefix(\\d{4}-\\d{2}-\\d{2})_run([12])\$');
+    final runs = <DailyRunProgress>[];
+    for (final key in _prefs!.getKeys().where(runKey.hasMatch)) {
+      try {
+        runs.add(DailyRunProgress.fromJson(jsonDecode(_prefs!.getString(key)!)));
+      } catch (_) {}
+    }
+    double total(DailyRunProgress p) => p.scores.values.fold(0.0, (a, b) => a + b);
+    bool matches(DailyRunProgress p, GameStat s, int slot) =>
+        p.isCompleted && p.runSlot == slot && (total(p) - s.score).abs() < 0.001;
+
+    for (final stat in StatsService().getStats('daily_run')) {
+      final slot = stat.targetValue == 'Sabah' ? 1 : 2;
+      if (runs.any((p) => p.dateKey == stat.date && matches(p, stat, slot))) continue;
+      // Koşu ancak kendi gününde ya da sonrasında kapanır; en yakın önceki günü al
+      final earlier = runs.where((p) => p.dateKey.compareTo(stat.date) < 0 && matches(p, stat, slot)).toList()
+        ..sort((a, b) => b.dateKey.compareTo(a.dateKey));
+      if (earlier.isNotEmpty) {
+        await StatsService().moveStatDate('daily_run', stat.date, earlier.first.dateKey, stat.targetValue);
+      }
+    }
+    await _prefs!.setBool(flag, true);
   }
 
   // ─── Run Slot Hesaplama ────────────────────────────────────────
@@ -286,6 +317,15 @@ class DailyRunService extends ChangeNotifier {
     final slot = progress.runSlot;
     final gameId = 'daily_run_${slot == 1 ? "morning" : "evening"}';
 
+    // Önce telefondaki geçmiş: internet yokken de kaybolmasın
+    await StatsService().saveDailyStat(
+      gameId: 'daily_run',
+      isWin: true,
+      score: totalScore,
+      targetValue: slot == 1 ? 'Sabah' : 'Akşam',
+      dateKey: progress.dateKey,
+    );
+
     await LeaderboardService().submitScore(
       gameId: gameId,
       score: totalScore,
@@ -295,14 +335,6 @@ class DailyRunService extends ChangeNotifier {
     );
 
     AnalyticsService().logDailyRunCompleted(totalScore.toInt());
-
-    // Daily Run sonucunu StatsService ile yerel geçmişe kaydet
-    await StatsService().saveDailyStat(
-      gameId: 'daily_run',
-      isWin: true,
-      score: totalScore,
-      targetValue: slot == 1 ? 'Sabah' : 'Akşam',
-    );
 
     // Her oyunun bireysel skorunu da kaydet
     for (final entry in progress.scores.entries) {

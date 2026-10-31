@@ -61,7 +61,7 @@ class _IceleScreenState extends State<IceleScreen> {
 
   void _solved() {
     _locked = true;
-    _sound.playWin();
+    _sound.playCorrect();
     final score = IceleGame.roundScore(_puzzle.par, _moves, solved: true);
     setState(() => _scores.add(score));
     Future.delayed(const Duration(milliseconds: 900), _nextRound);
@@ -70,7 +70,7 @@ class _IceleScreenState extends State<IceleScreen> {
   void _giveUpRound() {
     if (_locked) return;
     _locked = true;
-    _sound.playLose();
+    _sound.playError();
     setState(() => _scores.add(0));
     Future.delayed(const Duration(milliseconds: 400), _nextRound);
   }

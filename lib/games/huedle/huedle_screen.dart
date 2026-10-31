@@ -154,15 +154,9 @@ class _HuedleScreenState extends State<HuedleScreen>
   }
 
   // ─── Puan hesaplama ──────────────────────────────────────────────
-  int _getLevelScore() {
-    // Grid boyutu + zorluk bonusu
-    if (_level <= 5) {
-      return _level * 10; // 10, 20, 30, 40, 50
-    } else {
-      // 6x6'dan sonra ekstra zorluk bonusu
-      return 50 + (_level - 5) * 15;
-    }
-  }
+  /// Her seviye 10 puan; 10 seviye bitince oyun 100 puanla biter
+  static const int _maxLevel = 10;
+  int _getLevelScore() => 10;
 
   // ─── Kare tıklama ───────────────────────────────────────────────
   void _onTileTap(int index) {
@@ -181,11 +175,20 @@ class _HuedleScreenState extends State<HuedleScreen>
 
       Future.delayed(const Duration(milliseconds: 800), () {
         if (!mounted) return;
+        final finished = _level >= _maxLevel;
         setState(() {
           _level++;
           _showLevelUp = false;
-          _generateLevel();
+          if (finished) {
+            _isGameOver = true;
+          } else {
+            _generateLevel();
+          }
         });
+        if (finished) {
+          _saveScore();
+          _showGameOverDialog();
+        }
       });
     } else {
       // Yanlış! Oyun bitti
@@ -208,6 +211,7 @@ class _HuedleScreenState extends State<HuedleScreen>
 
   // ─── Skor kaydetme ────────────────────────────────────────────
   void _saveScore() {
+    _sound.playGameEnd(_score.toDouble());
     final durationMs =
         DateTime.now().difference(_gameStartTime!).inMilliseconds;
 
@@ -269,16 +273,16 @@ class _HuedleScreenState extends State<HuedleScreen>
   }
 
   Widget _buildResultSheet() {
-    final emoji = _score >= 500
+    final emoji = _score >= 80
         ? '🏆'
-        : _score >= 300
+        : _score >= 50
             ? '⭐'
-            : _score >= 100
+            : _score >= 20
                 ? '👍'
                 : '😅';
-    final title = _score >= 300 ? (LanguageService().currentLanguage == 'tr' ? 'Harika!' : 'Great!') : (LanguageService().currentLanguage == 'tr' ? 'Oyun Bitti!' : 'Game Over!');
+    final title = _score >= 50 ? (LanguageService().currentLanguage == 'tr' ? 'Harika!' : 'Great!') : (LanguageService().currentLanguage == 'tr' ? 'Oyun Bitti!' : 'Game Over!');
     final titleColor =
-        _score >= 300 ? Colors.greenAccent : Colors.orangeAccent;
+        _score >= 50 ? Colors.greenAccent : Colors.orangeAccent;
 
     return Container(
       decoration: BoxDecoration(
@@ -287,7 +291,7 @@ class _HuedleScreenState extends State<HuedleScreen>
           end: Alignment.bottomCenter,
           colors: [
             const Color(0xFF1A1A2E),
-            _score >= 300
+            _score >= 50
                 ? const Color(0xFF0A2E1A)
                 : const Color(0xFF2E1A0A),
           ],

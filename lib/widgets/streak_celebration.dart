@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/app_strings.dart';
-import '../services/sound_service.dart';
 import '../services/streak_service.dart';
 import '../services/daily_run_service.dart';
 import 'chunky_button.dart';
@@ -14,7 +13,6 @@ Future<void> maybeShowStreakCelebration(BuildContext context) async {
   if (!context.mounted || !StreakService().shouldCelebrate) return;
   await StreakService().markCelebrated();
   if (!context.mounted) return;
-  SoundService().playReward();
   await Navigator.of(context).push(
     PageRouteBuilder(
       opaque: false,

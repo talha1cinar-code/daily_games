@@ -59,14 +59,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadDailyRanks() async {
     for (final stat in _dailyRunHistory.take(30)) {
-      if (_dailyRunRanks.containsKey(stat.date)) continue;
+      final rankKey = '${stat.date}_${stat.targetValue}';
+      if (_dailyRunRanks.containsKey(rankKey)) continue;
       final slot = stat.targetValue == 'Sabah' ? 'morning' : 'evening';
       int? rank;
       try {
         rank = await LeaderboardService().getCachedUserRank('daily_run_$slot', stat.score, stat.durationMs, stat.date);
       } catch (_) {}
       if (!mounted) return;
-      setState(() => _dailyRunRanks[stat.date] = rank ?? -1);
+      setState(() => _dailyRunRanks[rankKey] = rank ?? -1);
     }
   }
 

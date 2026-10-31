@@ -12,7 +12,7 @@ class Duel {
   static const List<String> gamePool = [
     'reactle', 'quickle', 'slicele', 'stackle', 'mirrorle', 'anglele',
     'dropple', 'icele', 'huedle', 'timele', 'rgble', 'memorle', 'countle', 'balancele',
-    'centerle', 'mazele', 'echole', 'shadowle', 'rotatle',
+    'centerle', 'mazele', 'echole', 'shadowle', 'rotatle', 'tempole', 'fitle',
   ];
 
   final String id;

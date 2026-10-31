@@ -96,7 +96,7 @@ class _GamesScreenState extends State<GamesScreen> with TickerProviderStateMixin
     final score = r.score.toStringAsFixed(0);
     final String text;
     if (r.isNewBest) {
-      SoundService().playWin();
+      // Oyun sonu sesi oyunun içinde çaldı; çıkışta tekrarlanmaz
       text = AppStrings.newPersonalBest(score, r.previousBest!.toStringAsFixed(0));
     } else if (r.isFirst) {
       text = AppStrings.firstScore(score);

@@ -163,6 +163,12 @@ class SoundService {
     await _playSound('lose.wav', volume: 0.85);
   }
 
+  /// Bir oyun, yarıdan yüksek puanla bitince kazanılmış sayılır
+  static bool isGoodEnd(double normalizedScore) => normalizedScore >= 50;
+
+  /// Puanla biten oyunların tek bitiş sesi (puan 0-100)
+  Future<void> playGameEnd(double normalizedScore) => isGoodEnd(normalizedScore) ? playWin() : playLose();
+
   /// Coin kazanma veya harcama (satın alma)
   Future<void> playCoin() async {
     _vibrate(HapticFeedbackType.medium);

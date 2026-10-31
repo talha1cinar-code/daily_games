@@ -138,6 +138,7 @@ class _SliceleScreenState extends State<SliceleScreen> with TickerProviderStateM
     _stopwatch.stop();
     final durationMs = _stopwatch.elapsedMilliseconds;
     final score = _total;
+    _sound.playGameEnd(score);
     _saveScore(score, durationMs);
     final avgDiff = List.generate(
           _roundPercents.length,

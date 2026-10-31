@@ -92,10 +92,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _openDuels() {
+    if (_internetGate.isChecking) return;
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DuelScreen()));
   }
 
   void _openStore() {
+    if (_internetGate.isChecking) return;
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StoreScreen()));
   }
 
@@ -110,6 +112,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _navigateToGames() {
+    if (_internetGate.isChecking) return;
     Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => const GamesScreen(),
@@ -120,6 +123,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _navigateToProfile() {
+    if (_internetGate.isChecking) return;
     Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) => const ProfileScreen(),
@@ -510,6 +514,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   int _refreshToken = 0;
+  final InternetGate _internetGate = InternetGate();
 
   void _snack(String text) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -525,8 +530,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _openDailyRun() async {
-    final hasInternet = await NetworkUtils.checkInternet();
-    if (!mounted) return;
+    final hasInternet = await _internetGate.check();
+    if (hasInternet == null || !mounted) return;
     if (!hasInternet) return _snack(AppStrings.dailyRunInternetRequired);
     await Navigator.push(
       context,
@@ -541,8 +546,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _openLeaderboard() async {
-    final hasInternet = await NetworkUtils.checkInternet();
-    if (!mounted) return;
+    final hasInternet = await _internetGate.check();
+    if (hasInternet == null || !mounted) return;
     if (!hasInternet) return _snack(AppStrings.leaderboardInternetRequired);
     final slot = DailyRunService.currentRunSlot();
     Navigator.push(

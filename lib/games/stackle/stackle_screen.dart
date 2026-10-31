@@ -139,7 +139,7 @@ class _StackleScreenState extends State<StackleScreen> with SingleTickerProvider
         _falls.add(_Fall(res.chunk!, floor, floor, (_x < _game.placed[floor - 1].left ? -1 : 1) * 2.0));
         break;
       case PlaceOutcome.miss:
-        _sound.playLose();
+        _sound.playError();
         _comboLabel = null;
         _falls.add(_Fall(res.chunk!, floor, floor, _dir * 1.5));
         if (_ticketMode && !_continued && _game.floors > 0) {
@@ -193,6 +193,7 @@ class _StackleScreenState extends State<StackleScreen> with SingleTickerProvider
     _saveScore(score, durationMs);
     Future.delayed(const Duration(milliseconds: 1100), () {
       if (!mounted) return;
+      _sound.playGameEnd(score);
       GameResultSheet.show(
         context,
         GameResultSheet(

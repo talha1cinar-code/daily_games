@@ -174,7 +174,7 @@ class _QuickleScreenState extends State<QuickleScreen> with SingleTickerProvider
       _phase = _Phase.done;
       _remainingMs = 0;
     });
-    _sound.playWin();
+    _sound.playGameEnd(_game.score);
     _saveScore(durationMs);
 
     final total = _game.correct + _game.wrong;

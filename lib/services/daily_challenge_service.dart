@@ -135,27 +135,6 @@ class DailyChallengeService {
     return frequencies.map((f) => (f as num).toDouble()).toList();
   }
 
-  /// Wikitrivia: Günün tarihi olayları
-  /// Returns: `List<Map<String, dynamic>>?` (her biri {title: String, year: int})
-  Future<List<Map<String, dynamic>>?> getWikitriviaChallenge() async {
-    final data = await _getTodayData();
-    if (data == null) return null;
-    final wikitrivia = data['wikitrivia'] as Map<String, dynamic>?;
-    final events = wikitrivia?['events'] as List<dynamic>?;
-    if (events == null || events.isEmpty) return null;
-
-    return events.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-  }
-
-  /// Worldle: Günün hedef ülke ISO kodu
-  /// Returns: String? (örn: "TR")
-  Future<String?> getWorldleChallenge() async {
-    final data = await _getTodayData();
-    if (data == null) return null;
-    final worldle = data['worldle'] as Map<String, dynamic>?;
-    return worldle?['targetCountryCode'] as String?;
-  }
-
   // ═══════════════════════════════════════════════════════════════════
   // ─── Deterministik Seed Motoru ────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════
@@ -239,14 +218,6 @@ class DailyChallengeService {
     return List.generate(5, (_) {
       return 80.0 + rng.nextDouble() * 1120.0; // 80 - 1200 Hz
     });
-  }
-
-  /// Worldle: Seed tabanlı ülke seçimi.
-  /// [allCountries] ülke listesi dışarıdan geçilir.
-  static int getSeededWorldleIndex(int countryCount) {
-    final seed = getDailyRunSeed('worldle');
-    final rng = Random(seed);
-    return rng.nextInt(countryCount);
   }
 
   /// Memorle: Seed döndürür (Random(seed) ile tüm seviyeler deterministik).

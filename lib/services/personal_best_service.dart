@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'achievement_service.dart';
@@ -30,6 +31,32 @@ class PersonalBestService extends ChangeNotifier {
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    await _migrateLevelScores();
+  }
+
+  /// Huedle ve Memorle puanları 0-100'e indi; eski rekor ve geçmiş bir kez çevrilir,
+  /// yoksa eski büyük rekor bir daha geçilemezdi.
+  Future<void> _migrateLevelScores() async {
+    const flag = 'level_scores_migrated_v1';
+    if (_prefs!.getBool(flag) ?? false) return;
+    for (final id in ScoreScale.levelGames) {
+      final old = best(id);
+      if (old != null) await _prefs!.setDouble('$_prefix$id', ScoreScale.migrateLevelScore(id, old));
+
+      final statsKey = 'stats_$id';
+      final raw = _prefs!.getString(statsKey);
+      if (raw == null) continue;
+      try {
+        final stats = jsonDecode(raw) as List<dynamic>;
+        for (final s in stats.cast<Map<String, dynamic>>()) {
+          s['score'] = ScoreScale.migrateLevelScore(id, (s['score'] as num? ?? 0).toDouble());
+        }
+        await _prefs!.setString(statsKey, jsonEncode(stats));
+      } catch (e) {
+        debugPrint('PersonalBestService migrate error: $e');
+      }
+    }
+    await _prefs!.setBool(flag, true);
   }
 
   double? best(String gameId) => _prefs?.getDouble('$_prefix$gameId');

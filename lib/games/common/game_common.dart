@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/leaderboard_service.dart';
 import '../../services/personal_best_service.dart';
+import '../../services/score_scale.dart';
+import '../../services/sound_service.dart';
 import '../../services/stats_service.dart';
 import '../../services/ticket_service.dart';
 
@@ -19,6 +21,7 @@ void reportGameScore({
   int maxAttempts = 0,
   bool isWin = true,
 }) {
+  SoundService().playGameEnd(ScoreScale.normalize(gameId, score));
   if (onGameComplete != null) {
     onGameComplete(score, durationMs);
   } else if (isDailyMode) {

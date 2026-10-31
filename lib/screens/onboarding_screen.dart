@@ -58,7 +58,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  bool _finishing = false;
+
   Future<void> _finish({required bool startRun}) async {
+    if (_finishing) return;
+    _finishing = true;
     SoundService().playKeyTap();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(OnboardingScreen.doneKey, true);

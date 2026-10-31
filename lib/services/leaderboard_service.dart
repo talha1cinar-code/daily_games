@@ -237,18 +237,12 @@ class LeaderboardService {
         isWin: isWin,
       );
 
-      // Firestore subcollection write — sadece bu kullanıcının verisini güncelle
-      await _firestore
-          .collection('leaderboards')
-          .doc(docId)
-          .collection('entries')
-          .doc(userId)
-          .set(
-            entry.toMap(),
-            SetOptions(merge: true),
-          );
-      // Haftalık sıralamayı güncelle (Increment)
-      await _updateWeeklyLeaderboard(gameId, score);
+      // Günlük kayıt reddedilirse (o gün zaten yazılmışsa) haftalık puan da eklenmez
+      final weekId = weekIdFor(gameId, dateKeyOverride == null ? DailyRunService.turkeyNow : DateTime.parse(dateKey));
+      _commit([
+        ('leaderboards/$docId/entries/$userId', entry.toMap()),
+        ('weekly_leaderboards/$weekId/entries/$userId', _weeklyData(score)),
+      ]);
 
       // Invalidate memory cache so new score shows up immediately
       _cache.remove('daily_leaderboard_${gameId}_$dateKey');
@@ -534,33 +528,39 @@ class LeaderboardService {
 
   // ─── Yardımcılar ─────────────────────────────────────────────────
 
-  /// Haftalık leaderboard'u Firestore FieldValue.increment ile günceller
-  Future<void> _updateWeeklyLeaderboard(String gameId, double runScore) async {
-    try {
-      final now = DailyRunService.turkeyNow;
-      final weekNum = _isoWeekNumber(now);
-      final weekId = '${gameId}_${now.year}_w$weekNum';
+  /// Testlerde internetsiz Firestore'u taklit eder
+  @visibleForTesting
+  static Future<void> Function(List<(String, Map<String, dynamic>)> writes)? commitOverride;
 
-      await _firestore
-          .collection('weekly_leaderboards')
-          .doc(weekId)
-          .collection('entries')
-          .doc(userId)
-          .set({
+  /// Yazmaları tek işlemde gönderir ve onayı beklemez: internet yokken onay gelmez,
+  /// bekleyen kod da takılır. Firestore işlemi telefonda kalıcı kuyruğa alır ve
+  /// uygulama kapansa bile internet gelince bir kez gönderir.
+  Future<void> _commit(List<(String, Map<String, dynamic>)> writes) {
+    final override = commitOverride;
+    if (override != null) return override(writes);
+    final batch = _firestore.batch();
+    for (final (path, data) in writes) {
+      batch.set(_firestore.doc(path), data, SetOptions(merge: true));
+    }
+    return batch.commit().catchError((Object e) {
+      debugPrint('LeaderboardService commit Error: $e');
+    });
+  }
+
+  /// Haftalık kaydın FieldValue.increment ile güncellenen alanları
+  Map<String, dynamic> _weeklyData(double score) => {
         'name': displayName,
         'avatar': avatar,
         'banner': banner,
-        'totalScore': FieldValue.increment(runScore),
+        'totalScore': FieldValue.increment(score),
         'daysPlayed': FieldValue.increment(1),
         'lastUpdated': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    } catch (e) {
-      debugPrint('LeaderboardService _updateWeeklyLeaderboard Error: $e');
-    }
-  }
+      };
+
+  static String weekIdFor(String gameId, DateTime date) => '${gameId}_${date.year}_w${_isoWeekNumber(date)}';
 
   /// ISO-8601 hafta numarası hesaplama
-  int _isoWeekNumber(DateTime date) {
+  static int _isoWeekNumber(DateTime date) {
     final startOfYear = DateTime.utc(date.year, 1, 1);
     final utcDate = DateTime.utc(date.year, date.month, date.day);
     final dayOfYear = utcDate.difference(startOfYear).inDays + 1;
@@ -579,8 +579,8 @@ class LeaderboardService {
 
   /// Oyun tipine göre sıralama için birleşik skor hesaplar.
   ///
-  /// Wordle/Nerdle/Worldle: Az deneme + kısa süre = yüksek skor
-  /// Wikitrivia: Yüksek skor + kısa süre
+  /// Wordle/Nerdle: Az deneme + kısa süre = yüksek skor
+  /// Skor oyunları: yüksek skor + kısa süre
   /// RGBle/Sound/Timele: Doğrudan score değeri
   static double calculateLeaderboardScore({
     required String gameId,
@@ -590,14 +590,13 @@ class LeaderboardService {
     double score = 0.0,
     int? durationMs,
   }) {
-    if (!isWin && (gameId == 'wordle' || gameId == 'nerdle' || gameId == 'worldle')) {
+    if (!isWin && (gameId == 'wordle' || gameId == 'nerdle')) {
       return 0.0; // Kazanmayanlar 0 puan
     }
 
     switch (gameId) {
       case 'wordle':
       case 'nerdle':
-      case 'worldle':
         // Puan = (maxAttempts - attempts + 1) * 100 - süre bonusu
         // Böylece az denemede bilen daha yüksek puan alır
         final attemptScore = ((maxAttempts - attempts + 1) / maxAttempts) * 100;
@@ -624,7 +623,8 @@ class LeaderboardService {
       case 'echole':
       case 'shadowle':
       case 'rotatle':
-      case 'wikitrivia':
+      case 'tempole':
+      case 'fitle':
         // Doğrudan score değeri (0-100 arası)
         return score;
 

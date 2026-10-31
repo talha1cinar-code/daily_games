@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'wordle/wordle_screen.dart';
-import 'wikitrivia/wikitrivia_screen.dart';
+import 'tempole/tempole_screen.dart';
 import 'nerdle/nerdle_screen.dart';
-import 'worldle/worldle_screen.dart';
+import 'fitle/fitle_screen.dart';
 import 'rgble/rgble_screen.dart';
 import 'sound/sound_screen.dart';
 import 'timele/timele_screen.dart';
@@ -33,9 +33,9 @@ Widget? buildGameScreen(String id, {required bool isDailyMode, GameCompleteCallb
   final c = onGameComplete;
   return switch (id) {
     'wordle' => WordleScreen(isDailyMode: d, onGameComplete: c),
-    'wikitrivia' => WikitriviaScreen(isDailyMode: d, onGameComplete: c),
+    'tempole' => TempoleScreen(isDailyMode: d, onGameComplete: c),
     'nerdle' => NerdleScreen(isDailyMode: d, onGameComplete: c),
-    'worldle' => WorldleScreen(isDailyMode: d, onGameComplete: c),
+    'fitle' => FitleScreen(isDailyMode: d, onGameComplete: c),
     'rgble' => RgbleScreen(isDailyMode: d, onGameComplete: c),
     'sound' => SoundScreen(isDailyMode: d, onGameComplete: c),
     'timele' => TimeleScreen(isDailyMode: d, onGameComplete: c),
