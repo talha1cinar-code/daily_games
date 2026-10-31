@@ -104,7 +104,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _openStore() {
     if (_internetGate.isChecking) return;
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StoreScreen()));
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const StoreScreen(),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
   }
 
   @override

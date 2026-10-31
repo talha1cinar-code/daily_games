@@ -348,7 +348,13 @@ class _AvatarPickerSheetState extends State<AvatarPickerSheet> {
                       face: const Color(0xFFFFB627),
                       lip: const Color(0xFFC77F00),
                       height: 54,
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StoreScreen())),
+                      onTap: () => Navigator.of(context).push(
+                        PageRouteBuilder(
+                          pageBuilder: (context, animation, secondaryAnimation) => const StoreScreen(),
+                          transitionDuration: Duration.zero,
+                          reverseTransitionDuration: Duration.zero,
+                        ),
+                      ),
                       child: Text(
                         AppStrings.needMoreCoins(p.price - CoinService().balance),
                         style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white),
