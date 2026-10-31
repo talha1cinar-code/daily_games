@@ -71,7 +71,13 @@ class _DuelDetailScreenState extends State<DuelDetailScreen> {
       },
     );
     if (screen != null) {
-      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+      await Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => screen,
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
+      );
     }
     DailyChallengeService.seedOverride = null;
     SoundService().exitMiniGame();

@@ -93,7 +93,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _openDuels() {
     if (_internetGate.isChecking) return;
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DuelScreen()));
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const DuelScreen(),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+      ),
+    );
   }
 
   void _openStore() {

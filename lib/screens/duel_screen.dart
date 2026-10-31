@@ -220,7 +220,13 @@ class _DuelScreenState extends State<DuelScreen> {
       statusColor = Colors.white54;
     }
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => DuelDetailScreen(duelId: d.id))),
+      onTap: () => Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => DuelDetailScreen(duelId: d.id),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
+      ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         height: 72,
