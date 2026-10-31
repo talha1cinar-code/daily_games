@@ -250,15 +250,6 @@ class _MemorleScreenState extends State<MemorleScreen>
 
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
-      if (_level >= _maxLevel) {
-        setState(() {
-          _level++;
-          _isGameOver = true;
-        });
-        _saveScore();
-        _showGameOverDialog();
-        return;
-      }
       setState(() {
         _level++;
         _phase = _GamePhase.ready;
@@ -288,8 +279,7 @@ class _MemorleScreenState extends State<MemorleScreen>
   }
 
   // ─── Puan hesaplama ──────────────────────────────────────────────
-  /// Her seviye 10 puan; 10 seviye bitince oyun 100 puanla biter
-  static const int _maxLevel = 10;
+  /// Her seviye 10 puan; oyun ilk yanlışa kadar sürer
   int _getLevelScore() => 10;
 
   // ─── Skor kaydetme ────────────────────────────────────────────

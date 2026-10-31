@@ -12,10 +12,16 @@ void main() {
     expect(ScoreScale.migrateLevelScore('huedle', 150), 50);
     expect(ScoreScale.migrateLevelScore('huedle', 10), 10);
     expect(ScoreScale.migrateLevelScore('huedle', 0), 0);
-    expect(ScoreScale.migrateLevelScore('huedle', 900), 100);
+    expect(ScoreScale.migrateLevelScore('huedle', 900), 110, reason: '10. seviyeyi geçenler de karşılığını alır');
+    expect(ScoreScale.migrateLevelScore('memorle', 575), 100);
     expect(ScoreScale.migrateLevelScore('memorle', 261), 60);
     expect(ScoreScale.migrateLevelScore('memorle', 332), 70);
     expect(ScoreScale.migrateLevelScore('memorle', 30), 10);
+  });
+
+  test('Daily Run toplamında oyun başına en fazla 100 sayılır', () {
+    expect(ScoreScale.normalize('huedle', 150), 100);
+    expect(ScoreScale.normalize('memorle', 70), 70);
   });
 
   test('rekor ve geçmiş bir kez çevrilir, ikinci açılışta değişmez', () async {

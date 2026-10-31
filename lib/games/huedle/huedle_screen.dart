@@ -154,8 +154,7 @@ class _HuedleScreenState extends State<HuedleScreen>
   }
 
   // ─── Puan hesaplama ──────────────────────────────────────────────
-  /// Her seviye 10 puan; 10 seviye bitince oyun 100 puanla biter
-  static const int _maxLevel = 10;
+  /// Her seviye 10 puan; oyun ilk yanlışa kadar sürer
   int _getLevelScore() => 10;
 
   // ─── Kare tıklama ───────────────────────────────────────────────
@@ -175,20 +174,11 @@ class _HuedleScreenState extends State<HuedleScreen>
 
       Future.delayed(const Duration(milliseconds: 800), () {
         if (!mounted) return;
-        final finished = _level >= _maxLevel;
         setState(() {
           _level++;
           _showLevelUp = false;
-          if (finished) {
-            _isGameOver = true;
-          } else {
-            _generateLevel();
-          }
+          _generateLevel();
         });
-        if (finished) {
-          _saveScore();
-          _showGameOverDialog();
-        }
       });
     } else {
       // Yanlış! Oyun bitti

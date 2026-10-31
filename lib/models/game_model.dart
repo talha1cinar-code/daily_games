@@ -118,8 +118,8 @@ const List<GameModel> games = [
     isComingSoon: false,
     taglineTr: 'Göz',
     taglineEn: 'Eye',
-    howToTr: 'Izgaradaki farklı tonu bul, fark gitgide azalır. İlk yanlışta oyun biter. Her seviye 10 puan, 10 seviye.',
-    howToEn: 'Spot the tile with a different shade as the gap shrinks. One miss ends it. 10 levels, 10 points each.',
+    howToTr: 'Izgaradaki farklı tonu bul, fark gitgide azalır. İlk yanlışta oyun biter. Her seviye 10 puan.',
+    howToEn: 'Spot the tile with a different shade as the gap shrinks. One miss ends it. 10 points per level.',
   ),
   GameModel(
     name: 'Memorle',
@@ -129,8 +129,8 @@ const List<GameModel> games = [
     isComingSoon: false,
     taglineTr: 'Hafıza',
     taglineEn: 'Memory',
-    howToTr: 'Sayıyı kısa süre gör, sonra yaz. Basamaklar artar, süre kısalır. İlk yanlışta oyun biter. Her seviye 10 puan, 10 seviye.',
-    howToEn: 'See the number briefly, then type it. Digits grow, time shrinks. One miss ends it. 10 levels, 10 points each.',
+    howToTr: 'Sayıyı kısa süre gör, sonra yaz. Basamaklar artar, süre kısalır. İlk yanlışta oyun biter. Her seviye 10 puan.',
+    howToEn: 'See the number briefly, then type it. Digits grow, time shrinks. One miss ends it. 10 points per level.',
   ),
   GameModel(
     name: 'Reactle',

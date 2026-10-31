@@ -11,18 +11,27 @@ class ScoreScale {
     'timele': 40,
   };
 
-  /// Eski puanlamada 1-10. seviyeyi bitirince ulaşılan toplamlar
-  static const Map<String, List<int>> _oldLevelTotals = {
-    'huedle': [10, 30, 60, 100, 150, 215, 295, 390, 500, 625],
-    'memorle': [30, 63, 100, 150, 204, 261, 332, 406, 484, 575],
-  };
-
   /// Puanı değişen seviye oyunları
-  static Iterable<String> get levelGames => _oldLevelTotals.keys;
+  static const List<String> levelGames = ['huedle', 'memorle'];
+
+  /// Eski puanlamada bir seviyenin değeri
+  static int _oldLevelPoints(String gameId, int level) {
+    if (gameId == 'huedle') return level <= 5 ? level * 10 : 50 + (level - 5) * 15;
+    final digits = level <= 3 ? 3 : (level <= 6 ? 4 : (level <= 9 ? 5 : (level <= 12 ? 6 : 7)));
+    final showMs = (650 - (level - 1) * 35).clamp(200, 650);
+    return digits * 10 + (650 - showMs) ~/ 10;
+  }
 
   /// Eski puanı yeni ölçeğe çevirir: bitirilen seviye x 10
-  static double migrateLevelScore(String gameId, double oldScore) =>
-      _oldLevelTotals[gameId]!.where((total) => oldScore >= total).length * 10.0;
+  static double migrateLevelScore(String gameId, double oldScore) {
+    var levels = 0;
+    var total = 0;
+    while (true) {
+      total += _oldLevelPoints(gameId, levels + 1);
+      if (total > oldScore) return levels * 10.0;
+      levels++;
+    }
+  }
 
   static double normalize(String gameId, double rawScore) {
     final full = _fullScore[gameId] ?? 100;
